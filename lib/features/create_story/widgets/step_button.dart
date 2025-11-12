@@ -63,8 +63,9 @@ Widget build(BuildContext context, WidgetRef ref) {
 
      try {
        // TODO: 上傳 / 發布流程
-    print(ref.watch(createControllerProvider).title);
+    
     CreateState createState = ref.watch(createControllerProvider);
+    print(createState.audios[0].duration.inMicroseconds);
     String contentUrl = await UploadApi().uploadStoryContent(
       createState.audios[0].fileName,
       createState.audios[0].fileBytes,
@@ -89,9 +90,9 @@ Widget build(BuildContext context, WidgetRef ref) {
       createState.title!,
       createState.description!,
       [imageUrl],
-      createState.audios[0].duration.inMicroseconds,
-      (createState.audios[0].duration.inMicroseconds / 2).toInt(),
-      (createState.audios[0].duration.inMicroseconds / 2).toInt() + 20 * 1000,
+      createState.audios[0].duration.inMilliseconds,
+      (createState.audios[0].duration.inMilliseconds / 2).toInt(),
+      (createState.audios[0].duration.inMilliseconds / 2).toInt() + 20 * 1000,
       [BlockInfoDto(from: Duration.zero, to: createState.audios[0].duration, position: Duration.zero, soundIndex: 0, length: createState.audios[0].duration, volume: 0, url: "", name: "", waveformData: [], skip: Duration.zero, type: "story", soundType: "")],
       "enable",
       false,

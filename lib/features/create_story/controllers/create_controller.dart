@@ -262,7 +262,6 @@ class CreateController extends Notifier<CreateState> {
       publishMode: PublishMode.now,
       scheduledAt: null,
       collaborators: [],
-
     );
   }
 
@@ -315,7 +314,10 @@ class CreateController extends Notifier<CreateState> {
       final file = result.files.first;
       final data = file.bytes;
       if (data == null) return;
-      state = state.copyWith(imageFileBytes: Uint8List.fromList(data), imageFileName: file.name);
+      state = state.copyWith(
+        imageFileBytes: Uint8List.fromList(data),
+        imageFileName: file.name,
+      );
     } catch (e, st) {
       if (kDebugMode) {
         // 可換成你的 logger
@@ -324,7 +326,8 @@ class CreateController extends Notifier<CreateState> {
     }
   }
 
-  void clearCover() => state = state.copyWith(imageFileBytes: null, imageFileName: null);
+  void clearCover() =>
+      state = state.copyWith(imageFileBytes: null, imageFileName: null);
 
   // -------------------------
   // Upload / Audio
@@ -403,7 +406,9 @@ class CreateController extends Notifier<CreateState> {
           // 等到 ready（最多 3 秒）
           await player.processingStateStream
               .firstWhere(
-                (s) => s == ProcessingState.ready || s == ProcessingState.completed,
+                (s) =>
+                    s == ProcessingState.ready ||
+                    s == ProcessingState.completed,
               )
               .timeout(const Duration(seconds: 3));
         } catch (_) {

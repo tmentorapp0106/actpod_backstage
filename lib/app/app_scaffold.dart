@@ -1,5 +1,8 @@
+import 'package:actpod_studio/features/api/user_system_api.dart';
+import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'theme/theme.dart';
@@ -79,6 +82,7 @@ class _SideNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
+    
 
     final items = [
       // _NavItem('故事館', Icons.auto_graph_rounded, '/stories'),
@@ -97,18 +101,51 @@ class _SideNav extends StatelessWidget {
             // 1 Creator info 區塊
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-              child: _CreatorInfoTile(
-                name: 'ActPod Official',
-                subtitle: '',
-                avatarUrl:
-                    'https://story.actpodapp.com/banner/banner4.jpg', // 有圖就放 URL，沒圖就留 null
-                    
-                onTap: () {
-                  // TODO: 導到個人設定頁
-                  // context.go('/settings/profile');
+              child: Consumer(
+                builder: (context, ref, _) {
+                  final userState = ref.watch(userControllerProvider);
+
+                  return userState.when(
+                    data: (user) => _CreatorInfoTile(
+                      name: user?.name ?? '',
+                      subtitle: user?.email ?? '',
+                      avatarUrl: (user?.avatarUrl.isNotEmpty ?? false)
+                          ? user!.avatarUrl
+                          : null,
+                      onTap: () {},
+                    ),
+                    loading: () => const _CreatorInfoTile(
+                      name: '載入中...',
+                      subtitle: '',
+                      avatarUrl: null,
+                    ),
+                    error: (_, __) => const _CreatorInfoTile(
+                      name: '載入失敗',
+                      subtitle: '',
+                      avatarUrl: null,
+                    ),
+                  );
                 },
-              ), // 你自己的創作者資訊 Widget
+              ),
             ),
+
+            // Padding(
+            //   padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+            //   child:
+            //    _CreatorInfoTile(
+            //     name: 'ActPod Official',
+            //     subtitle: '',
+            //     avatarUrl:
+            //         'https://story.actpodapp.com/banner/banner4.jpg'.isNotEmpty
+            //         ? 'https://story.actpodapp.com/banner/banner4.jpg'
+            //         : null,
+
+            //     onTap: () {
+            //       // TODO: 導到個人設定頁
+            //       // context.go('/settings/profile');
+            //     },
+            //   ), // 你自己的創作者資訊 Widget
+            // ),
 
             const Divider(height: 1),
 
@@ -165,8 +202,8 @@ class _SideNav extends StatelessWidget {
                   label: const Text('登出'),
                   onPressed: () async {
                     // TODO: 登出邏輯
-                      await _signOut(context);
-                    },
+                    await _signOut(context);
+                  },
                 ),
               ),
             ),
@@ -182,17 +219,14 @@ Future<void> _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     // 登出成功後，導向登入頁面或其他適當的頁面
     context.go('/login');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已登出')),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('已登出')));
   } catch (e) {
     // 處理登出錯誤
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('登出失敗: $e')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('登出失敗: $e')));
   }
 }
-
 
 class _CreatorInfoTile extends StatelessWidget {
   final String name;
@@ -255,10 +289,13 @@ class _CreatorInfoTile extends StatelessWidget {
                         color: Color.fromARGB(220, 0, 0, 0),
                         height: 1.2,
                       ),
+                      // children: [
+                      //   TextSpan(text: '$channelCount Channels'),
+                      //   const TextSpan(text: '  •  '), // 中點分隔
+                      //   TextSpan(text: '$storyCount Stories'),
+                      // ],
                       children: [
-                        TextSpan(text: '$channelCount Channels'),
-                        const TextSpan(text: '  •  '), // 中點分隔
-                        TextSpan(text: '$storyCount Stories'),
+                        TextSpan(text: '$subtitle Channels'),
                       ],
                     ),
                   ),
@@ -280,6 +317,3 @@ class _NavItem {
   final String path;
   _NavItem(this.label, this.icon, this.path);
 }
-
-
-
