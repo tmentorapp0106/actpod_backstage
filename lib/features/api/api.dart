@@ -16,7 +16,7 @@ List<Channel> channels = [];
 class DioClient {
   static final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://gateway-1033518616359.asia-east1.run.app',
+      baseUrl: 'https://apiv1.actpodapp.com',
       connectTimeout: const Duration(
         seconds: 15,
       ).inMilliseconds, // ✅ 用 inMilliseconds

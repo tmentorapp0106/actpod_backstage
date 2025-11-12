@@ -82,15 +82,15 @@ class _LoginPageState extends State<LoginPage> {
 
 
       final response = await UserApi().thirdPartyCreateUserOrLogin(
-        idToken ?? '',
+        googleId ?? '',
         cred.user?.email ?? '',
         cred.user?.displayName ?? '',
       );
       userToken = response.data['data']['userToken'] ?? '';
       userId = response.data['data']['userId'] ?? '';
 
-      final userInfo = await UserApi().getUserInfo();
-      print('userInfo000000000000000: $userInfo["avatarUrl"]');
+      // final userInfo = await UserApi().getUserInfo();
+      // print('userInfo000000000000000: $userInfo["avatarUrl"]');
 
       final spaceResponse = await SpaceApi().getSpaces();
       final spaceListData = spaceResponse.data['data'] as List;

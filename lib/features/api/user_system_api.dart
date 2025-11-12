@@ -3,18 +3,18 @@ import 'package:dio/dio.dart';
 
 class UserApi {
   Future<Response> thirdPartyCreateUserOrLogin(
-    String firebaseToken,
+    String thirdPartyUserId,
     String? email,
     String nickname,
   ) async {
     var postData = {
-      "firebaseToken": firebaseToken,
+      "thirdPartyUserId": thirdPartyUserId,
       "thirdPartyEmail": email,
       "thirdPartyNickname": nickname,
     };
 
     Response response = await DioClient.handelPost(
-      "/user/signupOrLoginWithThirdParty/v2",
+      "/user/signupOrLoginWithThirdParty",
       postData,
     );
 
