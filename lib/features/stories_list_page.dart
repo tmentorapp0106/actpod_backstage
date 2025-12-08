@@ -236,7 +236,7 @@ class _StoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primary = AppTheme.seed;
+    final primary = AppTheme().theme.colorScheme.primary;
     return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(12),

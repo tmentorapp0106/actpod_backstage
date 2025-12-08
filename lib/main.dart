@@ -25,7 +25,7 @@ class ActPodAdminApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'ActPod Studio',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: AppTheme().theme,
       routerConfig: router,
     );
   }

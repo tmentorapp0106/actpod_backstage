@@ -1,13 +1,15 @@
+import 'package:actpod_studio/app/theme/color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 class AppTheme {
   static const Color seed = AppColors.brand;
+  
+  final theme = ThemeData(
+  useMaterial3: true,
+  colorScheme: AppColorScheme.light,
 
-  static ThemeData light = ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.light,
-    scaffoldBackgroundColor: AppColors.background,
+  scaffoldBackgroundColor: AppColors.background,
     cardColor: AppColors.surface,
     textTheme: const TextTheme(
       bodyMedium: TextStyle(color: AppColors.textPrimary),
@@ -95,7 +97,8 @@ class AppTheme {
       selectedColor: Color(0xFFFFE8B0),
       labelStyle: TextStyle(color: Color(0xFF374151)),
     ),
-  );
+);
+
 }
 
 class ColorRoles {

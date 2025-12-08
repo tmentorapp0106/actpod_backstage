@@ -27,7 +27,7 @@ class UserController extends AsyncNotifier<UserInfo?> {
   @override
   Future<UserInfo?> build() async {
     final res = await UserApi().getUserInfo(); // ← 這裡呼叫你的 API
-    print('User info response: $res'); // 👈 加這行
+    // print('User info response: $res'); // 👈 加這行
     return UserInfo.fromJson(res);
   }
 

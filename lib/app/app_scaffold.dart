@@ -65,8 +65,8 @@ class _TopBar extends StatelessWidget {
               const SizedBox(width: 4),
               CircleAvatar(
                 radius: 16,
-                backgroundColor: AppTheme.seed.withOpacity(.15),
-                child: const Icon(Icons.person, color: AppTheme.seed, size: 18),
+                backgroundColor: AppTheme().theme.colorScheme.primary.withOpacity(.15),
+                child: const Icon(Icons.person, color: Color(0xFFFFBC1F), size: 18),
               ),
             ],
           ),
@@ -160,12 +160,12 @@ class _SideNav extends StatelessWidget {
                     child: ListTile(
                       leading: Icon(
                         it.icon,
-                        color: selected ? AppTheme.seed : null,
+                        color: selected ? Color(0xFFFFBC1F): null,
                       ),
                       title: Text(
                         it.label,
                         style: TextStyle(
-                          color: selected ? AppTheme.seed : Colors.black87,
+                          color: selected ? Color(0xFFFFBC1F): Colors.black87,
                           fontWeight: selected
                               ? FontWeight.w600
                               : FontWeight.w400,
@@ -179,7 +179,7 @@ class _SideNav extends StatelessWidget {
                           ? Colors.transparent
                           : const Color.fromARGB(245, 245, 245, 245), // ✅ 修正後
                       tileColor: selected
-                          ? AppTheme.seed.withOpacity(.1)
+                          ? Color(0xFFFFBC1F).withOpacity(.1)
                           : Colors.white,
                       onTap: () => context.go(it.path),
                     ),
@@ -246,7 +246,7 @@ class _CreatorInfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final seed = AppTheme.seed;
+    final seed = AppTheme().theme.colorScheme.primary;
 
     return InkWell(
       onTap: onTap,

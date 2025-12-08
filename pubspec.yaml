@@ -46,6 +46,7 @@ dependencies:
   dotted_border: ^2.1.0
   just_audio: ^0.9.46
   dio: ^4.0.6
+  just_audio_web: ^0.4.16
 
 dev_dependencies:
   flutter_test:

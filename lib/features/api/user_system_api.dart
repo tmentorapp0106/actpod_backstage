@@ -25,4 +25,12 @@ class UserApi {
     Response response = await DioClient.handelGetWithToken("/user", {});
     return response.data;
   }
+
+  Future<dynamic> searchUser(String nickname) async {
+    var postData = {
+      "nickname": nickname,
+    };
+    Response response = await DioClient.handelPost("/search", postData);
+    return response.data;
+  }
 }

@@ -80,7 +80,7 @@ class _StoryCardPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primary = AppTheme.seed;
+    final primary = AppTheme().theme.colorScheme.primary;
 
     return AppCard(
       child: Padding(
@@ -100,7 +100,7 @@ class _StoryCardPreview extends StatelessWidget {
                         width: 110,
                         height: 110,
                         child: coverUrl == null || coverUrl!.isEmpty
-                            ? Image.memory(imageBytes, fit: BoxFit.cover)
+                            ? Image.memory(imageBytes!, fit: BoxFit.cover)
                             : Image.network(coverUrl!, fit: BoxFit.cover),
                       ),
                       Positioned(

@@ -217,20 +217,20 @@ class _LoginPageState extends State<LoginPage> {
                   // Google 按鈕
                   _AuthButton(
                     onPressed: _loading ? null : _signInWithGoogle,
-                    icon: SvgPicture.string(_googleSvg, width: 20, height: 20),
+                   icon: SvgPicture.asset('assets/images/Google_logo.svg',width: 20,height: 20),
                     label: '使用 Google 登入',
                   ),
                   const SizedBox(height: 12),
 
-                  // // Apple 按鈕（可依需求強制顯示；此處僅在 iOS 13+ 顯示）
-                  // if (_appleAvailable ||
-                  //     kIsWeb ||
-                  //     (!kIsWeb && !Platform.isIOS && !Platform.isAndroid))
-                  //   _AuthButton(
-                  //     onPressed: _loading ? null : _signInWithApple,
-                  //     icon: SvgPicture.string(_appleSvg, width: 20, height: 20),
-                  //     label: '使用 Apple 登入',
-                  //   ),
+                  // Apple 按鈕（可依需求強制顯示；此處僅在 iOS 13+ 顯示）
+                  if (_appleAvailable ||
+                      kIsWeb ||
+                      (!kIsWeb && !Platform.isIOS && !Platform.isAndroid))
+                    _AuthButton(
+                      onPressed: _loading ? null : _signInWithApple,
+                      icon: SvgPicture.asset('assets/images/Apple_logo.svg',width: 20,height: 20),
+                      label: '使用 Apple 登入',
+                    ),
                   const SizedBox(height: 24),
                   Row(
                     children: const [
@@ -328,15 +328,3 @@ class _AuthButton extends StatelessWidget {
   }
 }
 
-// 簡易 SVG（你也可改成本地資產）
-const String _googleSvg = '''
-<svg viewBox="0 0 24 24">
-<path d="M21.35 11.1h-9.17v2.98h5.26c-.23 1.34-1.58 3.93-5.26 3.93-3.17 0-5.76-2.62-5.76-5.86s2.59-5.86 5.76-5.86c1.81 0 3.02.77 3.72 1.44l2.52-2.43C16.94 3.59 15.01 2.8 12.92 2.8 7.99 2.8 4 6.81 4 11.74s3.99 8.94 8.92 8.94c5.16 0 8.58-3.62 8.58-8.72 0-.59-.06-1.04-.15-1.86z" fill="currentColor"/>
-</svg>
-''';
-
-const String _appleSvg = '''
-<svg viewBox="0 0 24 24">
-<path d="M16.365 1.43c0 1.14-.47 2.21-1.23 3-.79.84-2.1 1.48-3.21 1.45-.14-1.1.48-2.24 1.23-3.02.82-.83 2.24-1.45 3.21-1.43zm4.12 16.44c-.57 1.29-1.25 2.5-2.25 3.97-1.03 1.51-2.32 3.41-4.07 3.44-1.72.03-2.18-1.1-4.05-1.1-1.87 0-2.38 1.07-4.1 1.12-1.74.04-3.06-1.64-4.1-3.14C.8 19.94-.52 15.84.86 12.86c.77-1.67 2.14-2.74 3.64-2.77 1.71-.03 3.12 1.16 4.05 1.16.93 0 2.8-1.43 4.73-1.22.8.03 3.06.32 4.51 2.41-.12.07-2.69 1.57-2.66 4.67.03 3.72 3.25 4.97 3.34 4.97z" fill="currentColor"/>
-</svg>
-''';
