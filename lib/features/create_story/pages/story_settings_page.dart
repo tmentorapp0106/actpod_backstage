@@ -1,6 +1,7 @@
 import 'package:actpod_studio/app/theme/theme.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
 import 'package:actpod_studio/shared/widgets/app_card.dart';
+import 'package:actpod_studio/shared/widgets/avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -36,18 +37,14 @@ class SettingsStep extends ConsumerWidget {
       final controller = TextEditingController();
       final ok = await showDialog<bool>(
         context: context,
-        builder: (_) => StatefulBuilder(
-          builder: (context, setState) {
-            final allUsers = ["111","221","222","223","224","225","226","227","228","229","230","231","333","444","555"];
+        builder: (_) => Consumer(
+          builder: (context, ref, _) {
            
-            final filtered = allUsers
-                .where(
-                  (name) =>
-                      controller.text.isNotEmpty &&
-                      name.contains(controller.text),
-                )
-                .toList();
             final _scrollController = ScrollController();
+
+            final state = ref.watch(createControllerProvider); // 狀態
+            final ctrl = ref.read(createControllerProvider.notifier); // 方法
+
             return AlertDialog(
               title: const Text('新增合作創作者'),
               content: SizedBox(
@@ -60,32 +57,38 @@ class SettingsStep extends ConsumerWidget {
                       decoration: const InputDecoration(hintText: '輸入合作創作者名稱'),
                       autofocus: true,
                       onChanged: (_) {
-                        setState(() {});
+                        ctrl.searchUserList(controller.text);
+                        // print(state.searchUserList);
                       },
                     ),
                     SizedBox(height: 12),
+
                     Expanded(
-                        child: Scrollbar(
+                      child: Scrollbar(
+                        controller: _scrollController,
+                        thumbVisibility: true,
+                        child: ListView.builder(
                           controller: _scrollController,
-                          thumbVisibility: true, 
-                          child: ListView.builder(
-                            controller: _scrollController,
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) {
-                              final name = filtered[index];
-                              return ListTile(
-                                title: Text(name),
-                                leading: const Icon(Icons.person_outline),
-                                onTap: () {
-                                  controller.text = name;
-                                  setState(() {}); // 更新 TextField 顯示
-                                  Navigator.pop(context, true);
-                                },
-                              );
-                            },
-                          ),
+                          itemCount: state.searchUserList.length,
+                          itemBuilder: (context, index) {
+                            final name = state.searchUserList[index].name;
+                            return ListTile(
+                              title: Text(name),
+                              leading: Avatar(
+                                url: state.searchUserList[index].avatarUrl,
+                              ),
+                              onTap: () {
+                                controller.text = name;
+                                ctrl.addCollaborator(
+                                  state.searchUserList[index],
+                                );
+                                Navigator.pop(context, true);
+                              },
+                            );
+                          },
                         ),
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -100,9 +103,6 @@ class SettingsStep extends ConsumerWidget {
           },
         ),
       );
-      if (ok == true && controller.text.trim().isNotEmpty) {
-        ctrl.addCollaborator(controller.text.trim());
-      }
     }
 
     return AppCard(
@@ -117,35 +117,36 @@ class SettingsStep extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            // 金額 (Podcoin)
-            const _SectionTitle('金額 (Podcoin)'),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<int>(
-              value: state.pricePodcoin,
-              onChanged: (v) => ctrl.setPrice(v ?? 0),
-              items: const [
-                DropdownMenuItem(value: 0, child: Text('免費')),
-                DropdownMenuItem(value: 10, child: Text('10 Podcoin')),
-                DropdownMenuItem(value: 20, child: Text('20 Podcoin')),
-                DropdownMenuItem(value: 30, child: Text('30 Podcoin')),
-                DropdownMenuItem(value: 50, child: Text('50 Podcoin')),
-                DropdownMenuItem(value: 100, child: Text('100 Podcoin')),
-                DropdownMenuItem(value: 150, child: Text('150 Podcoin')),
-                DropdownMenuItem(value: 200, child: Text('200 Podcoin')),
-                DropdownMenuItem(value: 500, child: Text('500 Podcoin')),
-              ],
-              decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
+            // // 金額 (Podcoin)
+            // const _SectionTitle('金額 (Podcoin)'),
+            // const SizedBox(height: 8),
+            // DropdownButtonFormField<int>(
+            //   value: state.pricePodcoin,
+            //   onChanged: (v) => ctrl.setPrice(v ?? 0),
+            //   items: const [
+            //     DropdownMenuItem(value: 0, child: Text('免費')),
+            //     DropdownMenuItem(value: 10, child: Text('10 Podcoin')),
+            //     DropdownMenuItem(value: 20, child: Text('20 Podcoin')),
+            //     DropdownMenuItem(value: 30, child: Text('30 Podcoin')),
+            //     DropdownMenuItem(value: 50, child: Text('50 Podcoin')),
+            //     DropdownMenuItem(value: 100, child: Text('100 Podcoin')),
+            //     DropdownMenuItem(value: 150, child: Text('150 Podcoin')),
+            //     DropdownMenuItem(value: 200, child: Text('200 Podcoin')),
+            //     DropdownMenuItem(value: 500, child: Text('500 Podcoin')),
+            //   ],
+            //   decoration: InputDecoration(
+            //     contentPadding: const EdgeInsets.symmetric(
+            //       horizontal: 14,
+            //       vertical: 12,
+            //     ),
+            //     border: OutlineInputBorder(
+            //       borderRadius: BorderRadius.circular(12),
+            //     ),
+            //   ),
+            // ),
+            // const SizedBox(height: 28),
 
-            const SizedBox(height: 28),
+            
             const _SectionTitle('發布時間'),
             const SizedBox(height: 12),
             Row(
@@ -186,7 +187,7 @@ class SettingsStep extends ConsumerWidget {
                 const _SectionTitle('合作創作者'),
                 const SizedBox(width: 8),
                 Visibility(
-                  visible: state.collaborators.isEmpty == true,
+                  visible: state.collaborator == null,
                   child: IconButton(
                     visualDensity: VisualDensity.compact,
                     onPressed: addCollaborator,
@@ -203,7 +204,7 @@ class SettingsStep extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            if (state.collaborators.isEmpty)
+            if (state.collaborator==null)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
@@ -225,29 +226,17 @@ class SettingsStep extends ConsumerWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final name in state.collaborators)
                     InputChip(
-                      label: Text(name),
-                      onDeleted: () => ctrl.removeCollaborator(name),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      avatar: Avatar(url: state.collaborator?.avatarUrl?? "",radius: 40),
+                      label: Text(state.collaborator?.name ?? ""),
+                      onDeleted: () => ctrl.removeCollaborator(),
                     ),
                 ],
               ),
 
             const SizedBox(height: 24),
             const Divider(height: 32),
-            // Row(
-            //   children: [
-            //     OutlinedButton(
-            //       onPressed: state.canPrev ? ctrl.prevStep : null,
-            //       child: const Text('上一步'),
-            //     ),
-            //     const Spacer(),
-            //     FilledButton(
-            //       onPressed: ctrl.nextStep,
-            //       child: const Text('下一步'),
-            //     ),
-            //   ],
-            // ),
           ],
         ),
       ),

@@ -57,17 +57,17 @@ class _TopBar extends StatelessWidget {
                 child: SvgPicture.asset('assets/images/logo.svg', height: 32),
               ),
               const SizedBox(width: 12),
-              IconButton(
-                tooltip: '通知',
-                onPressed: () {},
-                icon: const Icon(Icons.notifications_none_rounded, size: 24),
-              ),
-              const SizedBox(width: 4),
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: AppTheme().theme.colorScheme.primary.withOpacity(.15),
-                child: const Icon(Icons.person, color: Color(0xFFFFBC1F), size: 18),
-              ),
+              // IconButton(
+              //   tooltip: '通知',
+              //   onPressed: () {},
+              //   icon: const Icon(Icons.notifications_none_rounded, size: 24),
+              // ),
+              // const SizedBox(width: 4),
+              // CircleAvatar(
+              //   radius: 16,
+              //   backgroundColor: AppTheme().theme.colorScheme.primary.withOpacity(.15),
+              //   child: const Icon(Icons.person, color: Color(0xFFFFBC1F), size: 18),
+              // ),
             ],
           ),
         ),
@@ -109,7 +109,7 @@ class _SideNav extends StatelessWidget {
                     data: (user) => _CreatorInfoTile(
                       name: user?.name ?? '',
                       subtitle: user?.email ?? '',
-                      avatarUrl: (user?.avatarUrl.isNotEmpty ?? false)
+                      avatarUrl: (user?.avatarUrl?.isNotEmpty ?? false)
                           ? user!.avatarUrl
                           : null,
                       onTap: () {},

@@ -1,27 +1,8 @@
 import 'package:actpod_studio/features/api/user_system_api.dart';
+import 'package:actpod_studio/features/create_story/models/user_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class UserInfo {
-  final String name;
-  final String avatarUrl;
-  final String email;
-  const UserInfo({
-    required this.name,
-    required this.avatarUrl,
-    required this.email,
-  });
 
-  factory UserInfo.fromJson(Map<String, dynamic> json) {
-  final data = json['data'] ?? {}; // 進到內層 data
-
-  return UserInfo(
-    name: data['nickname'] ?? '',
-    avatarUrl: data['avatarUrl'] ?? '',
-    email: data['email'] ?? '',
-  );
-}
-
-}
 
 class UserController extends AsyncNotifier<UserInfo?> {
   @override

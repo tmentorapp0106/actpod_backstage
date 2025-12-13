@@ -24,7 +24,7 @@ class PublishFlowPage extends StatelessWidget {
     final children = <Widget>[
       const UploadStep(),
       const DetailStep(),
-      const HighlightStep(),
+      // const HighlightStep(),
       const SettingsStep(),
       const PreviewStep(),
     ];
@@ -38,8 +38,8 @@ class PublishFlowPage extends StatelessWidget {
           _PublishHeader(
             current: stepIndex,
             total: steps.length,
-            labels: const ['上傳音檔', '編輯故事', '擷取精華', '上傳設定', '預覽畫面'],
-            // labels: const ['上傳音檔', '編輯故事', '預覽畫面'],
+            labels: const ['上傳音檔', '編輯故事', '上傳設定', '預覽畫面'],
+            // labels: const ['上傳音檔', '編輯故事', '擷取精華', '上傳設定', '預覽畫面'],
           ),
           const SizedBox(height: 16),
 

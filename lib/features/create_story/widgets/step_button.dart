@@ -3,6 +3,7 @@ import 'package:actpod_studio/features/api/story_system_api.dart';
 import 'package:actpod_studio/features/api/upload_system_api.dart';
 import 'package:actpod_studio/features/create_story/const.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
 import 'package:actpod_studio/features/create_story/widgets/step_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +20,9 @@ class StepButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // 只針對需要的欄位重建：效能較佳
+    final state = ref.watch(createControllerProvider);
+    final ctrl = ref.read(createControllerProvider.notifier);
+
     final isSaving = ref.watch(
       createControllerProvider.select((s) => s.isSaving),
     );
@@ -37,10 +41,21 @@ class StepButton extends ConsumerWidget {
         busy: isSaving, // 右側按鈕顯示 loading
         disableNext: isSaving || !canNext, // 發布中或驗證未過 禁用
 
-        onPrev: () => context.go('/publish/${stepIndex - 1}'),
+        onPrev: () {
+          if (stepIndex > 0) {
+            ctrl.back();
+            context.go('/publish/${state.currentPage - 1}');
+            print('Go to /publish/${state.currentPage}');
+          }
+        },
         onNext: () {
           if (stepIndex < steps.length - 1) {
-            context.go('/publish/${stepIndex + 1}');
+            print(state.currentPage);
+            if (!canNext) return; // 防呆
+            ctrl.next();
+            context.go('/publish/${state.currentPage + 1}');
+            print('Go to /publish/${state.currentPage}');
+           
           } else {
             _submit(context, ref); // 內部會 setSaving(true/false)
           }
@@ -50,9 +65,9 @@ class StepButton extends ConsumerWidget {
   }
 
   String _nextLabel(int i) {
-    if (i < 2) return '下一步';
-    if (i == 2) return '進行上傳設定';
-    if (i == 3) return '進入預覽畫面';
+    if (i < 1) return '下一步';
+    if (i == 1) return '進行上傳設定';
+    if (i == 2) return '進入預覽畫面';
     return '發布';
   }
 
@@ -113,21 +128,22 @@ class StepButton extends ConsumerWidget {
         "enable",
         false,
         0,
-        null,
-        null,
+        createState.collaborator!.userId,
+        createState.scheduledAt,
       );
-
-    
 
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('已提交發布（示意）')));
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('發布失敗：$e');
+      debugPrint(st.toString()); // ✅ 會印出是哪一行
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('發布失敗：$e')));
     } finally {
       ctrl.setSaving(false);
+      ctrl.jumpTo(0); // 回到第一步
       GoRouter.of(context).go('/publish/0'); // 發布後回到第一步
     }
   }

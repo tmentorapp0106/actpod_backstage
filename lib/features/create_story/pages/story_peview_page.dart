@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:actpod_studio/app/theme/theme.dart';
+import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
 import 'package:actpod_studio/shared/widgets/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,12 +14,15 @@ class PreviewStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(createControllerProvider);
+    final userName = ref.read(userControllerProvider.notifier).state.value?.name ?? '';
+
 
     // --- 依你的 CreateState 欄位替換以下對應 ---
     final title        = (state.title ?? '').trim();              // ex: state.title
     final description  = (state.description ?? '').trim();        // ex: state.description
-    final channelName  = (state.selectedSpace ?? '未選擇頻道');     // ex: state.selectedChannelName
-    final authorName   = '';                // 若沒有可留空
+    final channelName  = (state.selectedChannel ?? '未選擇頻道');     // ex: state.selectedChannelName
+    final selectedSpace  = (state.selectedSpace ?? '未選擇頻道');     // ex: state.selectedChannelName
+    final authorName   = userName;                // 若沒有可留空
     final coverUrl     = '';                          // ex: state.coverUrl
     final scheduledAt  = state.scheduledAt;                       // ex: state.scheduledAt
     final isScheduled  = state.publishMode == PublishMode.schedule;
@@ -38,6 +42,7 @@ class PreviewStep extends ConsumerWidget {
           title: title.isNotEmpty ? title : '（未命名）',
           description: description.isNotEmpty ? description : '（尚未輸入描述）',
           channelName: channelName,
+          selectedSpace:selectedSpace,
           authorName: authorName.isNotEmpty ? authorName : '作者',
           coverUrl: coverUrl,
           imageBytes: state.imageFileBytes!,
@@ -57,6 +62,7 @@ class PreviewStep extends ConsumerWidget {
 class _StoryCardPreview extends StatelessWidget {
   final String title;
   final String description;
+  final String selectedSpace;
   final String channelName;
   final String authorName;
   final String? coverUrl;
@@ -68,6 +74,7 @@ class _StoryCardPreview extends StatelessWidget {
   const _StoryCardPreview({
     required this.title,
     required this.description,
+    required this.selectedSpace,
     required this.channelName,
     required this.authorName,
     required this.dateTime,
@@ -143,7 +150,7 @@ class _StoryCardPreview extends StatelessWidget {
                       if (authorName.isNotEmpty)
                         _LineMeta(icon: Icons.person_rounded, text: authorName),
                       const SizedBox(height: 8),
-                      const _TagChip(label: '空間'), // 之後可用實際 space tag
+                      _TagChip(label: selectedSpace), // 之後可用實際 space tag
                     ],
                   ),
                 ),
@@ -201,7 +208,8 @@ String _fmt(DateTime dt) {
   final d = dt.day.toString().padLeft(2, '0');
   final hh = dt.hour.toString().padLeft(2, '0');
   final mm = dt.minute.toString().padLeft(2, '0');
-  return '$y-$m-$d $hh:$mm';
+  // return '$y-$m-$d $hh:$mm';
+  return '$y-$m-$d';
 }
 
 /// 行內元素 & Tag

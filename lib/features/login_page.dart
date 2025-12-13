@@ -231,26 +231,26 @@ class _LoginPageState extends State<LoginPage> {
                       icon: SvgPicture.asset('assets/images/Apple_logo.svg',width: 20,height: 20),
                       label: '使用 Apple 登入',
                     ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: const [
-                      Expanded(child: Divider()),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Text('或'),
-                      ),
-                      Expanded(child: Divider()),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+                  // const SizedBox(height: 24),
+                  // Row(
+                  //   children: const [
+                  //     Expanded(child: Divider()),
+                  //     Padding(
+                  //       padding: EdgeInsets.symmetric(horizontal: 12),
+                  //       child: Text('或'),
+                  //     ),
+                  //     Expanded(child: Divider()),
+                  //   ],
+                  // ),
+                  // const SizedBox(height: 12),
 
-                  // 額外選項：遊客/稍後再說（可依你需求移除）
-                  TextButton(
-                    onPressed: _loading
-                        ? null
-                        : () => Navigator.of(context).maybePop(),
-                    child: const Text('稍後再說'),
-                  ),
+                  // // 額外選項：遊客/稍後再說（可依你需求移除）
+                  // TextButton(
+                  //   onPressed: _loading
+                  //       ? null
+                  //       : () => Navigator.of(context).maybePop(),
+                  //   child: const Text('稍後再說'),
+                  // ),
 
                   const SizedBox(height: 24),
 

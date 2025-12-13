@@ -17,6 +17,7 @@ class HighlightStep extends ConsumerStatefulWidget {
 }
 
 class _HighlightStepState extends ConsumerState<HighlightStep> {
+  
 
   late final AudioPlayer _player;
   StreamSubscription<Duration>? _posSub;
@@ -105,6 +106,13 @@ void dispose() {
     return Duration(seconds: end.clamp(0, maxEnd));
   }
 
+
+  void _toggleLock() {
+    setState(() {
+      _highlightLocked = !_highlightLocked;
+    });
+  }
+
 void _togglePlay() async {
   // 目前是「播放中」→ 那就暫停
   if (_playing) {
@@ -150,6 +158,9 @@ void _togglePlay() async {
     }
   });
 }
+
+
+
 
 
   @override
@@ -210,6 +221,17 @@ void _togglePlay() async {
             ),
             const SizedBox(height: 20),
 
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
             // ===== 開始時間（分：秒 兩格 + 選取按鈕） =====
             const Text('輸入精華開始時間',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
@@ -287,6 +309,23 @@ void _togglePlay() async {
                       color: Colors.white,
                     ),
                   ),
+                  SizedBox(width: 12),
+                  FilledButton.icon(
+                    onPressed: _toggleLock,
+                    style: FilledButton.styleFrom(
+                      backgroundColor:context.color.border ,
+                      minimumSize: const Size(80, 36),
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    icon: Icon(
+                      _highlightLocked ? Icons.lock_open_rounded : Icons.lock_outline,
+                      color: Colors.white,
+                    ),
+                    label: Text(_highlightLocked ? '選定' : '重選'),
+                    ),
                 ],
               ),
             ),

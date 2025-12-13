@@ -30,7 +30,7 @@ class UserApi {
     var postData = {
       "nickname": nickname,
     };
-    Response response = await DioClient.handelPost("/search", postData);
+    Response response = await DioClient.handelPost("/user/search", postData);
     return response.data;
   }
 }
