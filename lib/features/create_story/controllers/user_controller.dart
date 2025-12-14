@@ -34,7 +34,6 @@ class UserController extends Notifier<UserInfo?> {
     final response = await api.getUserInfo();
     final userInfo = UserInfo.fromJson(response);
     state = userInfo;
-    print('User info in controller: ${state?.name}');
   }
 
 

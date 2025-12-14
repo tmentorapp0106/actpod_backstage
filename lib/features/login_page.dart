@@ -89,18 +89,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       final userState = ref.read(userControllerProvider);
       final ctrl = ref.read(createControllerProvider.notifier);
       await ctrl.getSpaceList();
-      print("00000000000000000000000000000000000000000000000000000000000");
-      print(userState?.userId ?? '');
       ctrl.getUserChannels(userState?.userId ?? '');
 
       if (mounted) setState(() => _loading = false);
 
       await _onSignedIn(cred);
-      print(
-        '✅ 登入成功，使用者 UID：${cred.user?.providerData.firstWhere((p) => p.providerId == 'google.com').uid}',
-      );
-
-      print('✅ 登入成功，使用者 UID：${cred.user?.uid}');
     } catch (e) {
       _showError(e);
     }
