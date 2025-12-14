@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:actpod_studio/app/theme/theme.dart';
 import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
-import 'package:actpod_studio/shared/widgets/app_card.dart';
+import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
@@ -14,7 +14,7 @@ class PreviewStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(createControllerProvider);
-    final userName = ref.read(userControllerProvider.notifier).state.value?.name ?? '';
+    final userName = ref.read(userControllerProvider)?.name;
 
 
     // --- 依你的 CreateState 欄位替換以下對應 ---
@@ -22,7 +22,7 @@ class PreviewStep extends ConsumerWidget {
     final description  = (state.description ?? '').trim();        // ex: state.description
     final channelName  = (state.selectedChannel ?? '未選擇頻道');     // ex: state.selectedChannelName
     final selectedSpace  = (state.selectedSpace ?? '未選擇頻道');     // ex: state.selectedChannelName
-    final authorName   = userName;                // 若沒有可留空
+    final authorName   = userName?? '';                // 若沒有可留空
     final coverUrl     = '';                          // ex: state.coverUrl
     final scheduledAt  = state.scheduledAt;                       // ex: state.scheduledAt
     final isScheduled  = state.publishMode == PublishMode.schedule;

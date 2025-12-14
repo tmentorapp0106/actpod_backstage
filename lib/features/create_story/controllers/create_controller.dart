@@ -1,6 +1,8 @@
 // lib/features/create_story/controllers/create_controller.dart
 import 'dart:typed_data';
 import 'package:actpod_studio/features/api/api.dart';
+import 'package:actpod_studio/features/api/channel_system_api.dart';
+import 'package:actpod_studio/features/api/space_system_api.dart';
 import 'package:actpod_studio/features/api/user_system_api.dart';
 import 'package:actpod_studio/features/create_story/models/channel_model.dart';
 import 'package:actpod_studio/features/create_story/models/space_model.dart';
@@ -147,7 +149,8 @@ class CreateState {
         return (title != null && title!.trim().isNotEmpty) &&
             (description != null && description!.trim().isNotEmpty) &&
             (selectedSpace != null && selectedSpace!.isNotEmpty) &&
-            (selectedChannel != null && selectedChannel!.isNotEmpty)&&(imageFileBytes != null);
+            (selectedChannel != null && selectedChannel!.isNotEmpty) &&
+            (imageFileBytes != null);
       // case 2: // Highlight
       //   return selectionEnd > selectionStart && highlightLength > Duration.zero;
       case 2: // Settings
@@ -215,8 +218,8 @@ class CreateState {
       // Settings
       pricePodcoin: pricePodcoin ?? this.pricePodcoin,
       publishMode: publishMode ?? this.publishMode,
-      scheduledAt: scheduledAt, // 允許覆寫為 null
-      collaborator: collaborator,
+      scheduledAt: scheduledAt ?? this.scheduledAt, 
+      collaborator: collaborator ?? this.collaborator,
       searchUserList: searchUserList ?? this.searchUserList,
       // Others
       isSaving: isSaving ?? this.isSaving,
@@ -266,8 +269,8 @@ class CreateController extends Notifier<CreateState> {
   CreateState build() {
     return CreateState(
       currentPage: 0,
-      spaces: spaces,
-      channels: channels,
+      spaces: [],
+      channels: [],
       pricePodcoin: 0,
       publishMode: PublishMode.now,
       scheduledAt: null,
@@ -293,6 +296,31 @@ class CreateController extends Notifier<CreateState> {
   void jumpTo(int index) {
     final i = index.clamp(0, maxSteps - 1);
     state = state.copyWith(currentPage: i, error: null);
+  }
+
+  void clear() {
+    state=state.copyWith(
+      currentPage: 0,
+      title: null,
+      description: null,
+      selectedSpace: null,
+      selectedChannel: null,
+      imageFileName: null,
+      imageFileBytes: null,
+      audios: [],
+      selectedAudioId: null,
+      highlightLength: const Duration(seconds: 20),
+      selectionStart: Duration.zero,
+      selectionEnd: const Duration(seconds: 20),
+      transitionMusicPath: null,
+      pricePodcoin: 0,
+      publishMode: PublishMode.now,
+      scheduledAt: null,
+      collaborator: null,
+      searchUserList: [],
+      isSaving: false,
+      error: null,
+    );
   }
 
   // -------------------------
@@ -546,6 +574,27 @@ class CreateController extends Notifier<CreateState> {
   // -------------------------
   // 2 Detail setters
   // -------------------------
+  Future<void> getSpaceList() async {
+    final spaceResponse = await SpaceApi().getSpaces();
+    final spaceListData = spaceResponse.data['data'] as List;
+    state = state.copyWith(
+      spaces: spaceListData
+          .whereType<Map<String, dynamic>>()
+          .map((e) => Space.fromJson(e))
+          .toList(),
+    );
+  }
+
+  void getUserChannels(String userId) async {
+    final channelResponse = await ChannelApi().getUserChannels(userId);
+    final channelListData = channelResponse.data['data'] as List;
+    state = state.copyWith(
+      channels: channelListData.map((e) {
+        return Channel.fromJson(e);
+      }).toList(),
+    );
+  }
+
   void setTitle(String v) => state = state.copyWith(title: v);
   void setDescription(String v) => state = state.copyWith(description: v);
   void setSpace(String? v) => state = state.copyWith(selectedSpace: v);
@@ -637,7 +686,7 @@ class CreateController extends Notifier<CreateState> {
   }
 
   void removeCollaborator() {
-    state = state.copyWith(collaborator: null);
+    state = state.copyWith(collaborator: UserInfo(userId: "", name: "", avatarUrl: "", email: ""));
   }
 
   // -------------------------

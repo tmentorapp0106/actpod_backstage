@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
 import 'package:actpod_studio/features/create_story/models/channel_model.dart';
 import 'package:actpod_studio/features/create_story/models/space_model.dart';
-import 'package:actpod_studio/shared/widgets/app_card.dart';
+import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

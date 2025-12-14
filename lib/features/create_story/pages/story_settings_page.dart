@@ -1,9 +1,13 @@
 import 'package:actpod_studio/app/theme/theme.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
-import 'package:actpod_studio/shared/widgets/app_card.dart';
-import 'package:actpod_studio/shared/widgets/avatar.dart';
+import 'package:actpod_studio/widgets/app_card.dart';
+import 'package:actpod_studio/widgets/avatar.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:interval_time_picker/interval_time_picker.dart';
+import 'package:interval_time_picker/models/visible_step.dart';
+import 'package:time_picker_spinner_pop_up/time_picker_spinner_pop_up.dart';
 
 class SettingsStep extends ConsumerWidget {
   const SettingsStep({super.key});
@@ -15,31 +19,44 @@ class SettingsStep extends ConsumerWidget {
     final ctrl = ref.read(createControllerProvider.notifier); // 方法
 
     Future<void> pickSchedule() async {
+      print("0000000000000000000000");
       final now = DateTime.now();
+      var timeMinute = now.minute;
+
       final date = await showDatePicker(
         context: context,
         initialDate: state.scheduledAt ?? now,
         firstDate: now,
-        lastDate: DateTime(now.year + 2),
+        lastDate: now.add(const Duration(days: 90)),
       );
       if (date == null) return;
-      final time = await showTimePicker(
+
+      final time = await showIntervalTimePicker(
         context: context,
-        initialTime: TimeOfDay.fromDateTime(state.scheduledAt ?? now),
+        initialTime: TimeOfDay.fromDateTime(DateTime.now()),
+        interval: 30,
+        visibleStep: VisibleStep.thirtieths,
       );
+      if (time!.minute % 30 != 0) {
+        final adjustedMinute = (time.minute ~/ 30) * 30;
+        timeMinute = adjustedMinute;
+      } else {
+        timeMinute = time.minute;
+      }
+
       if (time == null) return;
       ctrl.setScheduledAt(
-        DateTime(date.year, date.month, date.day, time.hour, time.minute),
+        DateTime(date.year, date.month, date.day, time!.hour, timeMinute),
       );
     }
 
     Future<void> addCollaborator() async {
+       print(state.collaborator);
       final controller = TextEditingController();
       final ok = await showDialog<bool>(
         context: context,
         builder: (_) => Consumer(
           builder: (context, ref, _) {
-           
             final _scrollController = ScrollController();
 
             final state = ref.watch(createControllerProvider); // 狀態
@@ -145,8 +162,6 @@ class SettingsStep extends ConsumerWidget {
             //   ),
             // ),
             // const SizedBox(height: 28),
-
-            
             const _SectionTitle('發布時間'),
             const SizedBox(height: 12),
             Row(
@@ -187,7 +202,7 @@ class SettingsStep extends ConsumerWidget {
                 const _SectionTitle('合作創作者'),
                 const SizedBox(width: 8),
                 Visibility(
-                  visible: state.collaborator == null,
+                  visible: state.collaborator!.userId == "",
                   child: IconButton(
                     visualDensity: VisualDensity.compact,
                     onPressed: addCollaborator,
@@ -204,7 +219,7 @@ class SettingsStep extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            if (state.collaborator==null)
+            if (state.collaborator!.userId == "")
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
@@ -226,12 +241,21 @@ class SettingsStep extends ConsumerWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                    InputChip(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      avatar: Avatar(url: state.collaborator?.avatarUrl?? "",radius: 40),
-                      label: Text(state.collaborator?.name ?? ""),
-                      onDeleted: () => ctrl.removeCollaborator(),
+                  InputChip(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
+                    avatar: Avatar(
+                      url: state.collaborator?.avatarUrl ?? "",
+                      radius: 40,
+                    ),
+                    label: Text(state.collaborator?.name ?? ""),
+                    onDeleted: () {
+                      ctrl.removeCollaborator();
+                      print(state.collaborator);
+                    },
+                  ),
                 ],
               ),
 

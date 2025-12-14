@@ -4,24 +4,27 @@ import 'package:actpod_studio/features/api/api.dart';
 import 'package:actpod_studio/features/api/channel_system_api.dart';
 import 'package:actpod_studio/features/api/space_system_api.dart';
 import 'package:actpod_studio/features/api/user_system_api.dart';
+import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
 import 'package:actpod_studio/features/create_story/models/channel_model.dart';
 import 'package:actpod_studio/features/create_story/models/space_model.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   bool _loading = false;
   bool _appleAvailable = false;
 
@@ -57,7 +60,7 @@ class _LoginPageState extends State<LoginPage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('Welcome, $name')));
-    GoRouter.of(context).go('/publish/:step');
+    GoRouter.of(context).go('/publish/0');
     Navigator.of(context).maybePop();
   }
 
@@ -73,41 +76,25 @@ class _LoginPageState extends State<LoginPage> {
       final googleId = cred.additionalUserInfo?.profile?['id'];
       final googleprofile = cred.additionalUserInfo?.profile;
       final idToken = await cred.user?.getIdToken();
-      print('🔐 Firebase ID Token: $idToken');
-
-      print('🆔 Google user id (Web): $googleId');
-      print('🆔 Google user profile (Web): $googleprofile');
 
       
-
-
-      final response = await UserApi().thirdPartyCreateUserOrLogin(
+      final userCtrl = ref.read(userControllerProvider.notifier);
+      await userCtrl.login(
         idToken ?? '',
-        cred.user?.email ?? '',
-        cred.user?.displayName ?? '',
+        googleprofile?['email'],
+        googleprofile?['name'] ?? '',
       );
-      userToken = response.data['data']['userToken'] ?? '';
-      userId = response.data['data']['userId'] ?? '';
+      await userCtrl.getUserInfo();
 
-      final userInfo = await UserApi().getUserInfo();
-      print('userInfo000000000000000: $userInfo["avatarUrl"]');
-
-      final spaceResponse = await SpaceApi().getSpaces();
-      final spaceListData = spaceResponse.data['data'] as List;
-      spaces = spaceListData
-          .whereType<Map<String, dynamic>>()
-          .map((e) => Space.fromJson(e))
-          .toList();
+      final userState = ref.read(userControllerProvider);
+      final ctrl = ref.read(createControllerProvider.notifier);
+      await ctrl.getSpaceList();
+      print("00000000000000000000000000000000000000000000000000000000000");
+      print(userState?.userId ?? '');
+      ctrl.getUserChannels(userState?.userId ?? '');
 
       if (mounted) setState(() => _loading = false);
 
-      final channelResponse = await ChannelApi().getUserChannels(userId);
-      final channelListData = channelResponse.data['data'] as List;
-      channels = channelListData.map((e) {
-        return Channel.fromJson(e);
-      }).toList();
-
-      print('🌐 Backend response: ${channels.first}');
       await _onSignedIn(cred);
       print(
         '✅ 登入成功，使用者 UID：${cred.user?.providerData.firstWhere((p) => p.providerId == 'google.com').uid}',
@@ -217,7 +204,11 @@ class _LoginPageState extends State<LoginPage> {
                   // Google 按鈕
                   _AuthButton(
                     onPressed: _loading ? null : _signInWithGoogle,
-                   icon: SvgPicture.asset('assets/images/Google_logo.svg',width: 20,height: 20),
+                    icon: SvgPicture.asset(
+                      'assets/images/Google_logo.svg',
+                      width: 20,
+                      height: 20,
+                    ),
                     label: '使用 Google 登入',
                   ),
                   const SizedBox(height: 12),
@@ -228,9 +219,14 @@ class _LoginPageState extends State<LoginPage> {
                       (!kIsWeb && !Platform.isIOS && !Platform.isAndroid))
                     _AuthButton(
                       onPressed: _loading ? null : _signInWithApple,
-                      icon: SvgPicture.asset('assets/images/Apple_logo.svg',width: 20,height: 20),
+                      icon: SvgPicture.asset(
+                        'assets/images/Apple_logo.svg',
+                        width: 20,
+                        height: 20,
+                      ),
                       label: '使用 Apple 登入',
                     ),
+
                   // const SizedBox(height: 24),
                   // Row(
                   //   children: const [
@@ -251,7 +247,6 @@ class _LoginPageState extends State<LoginPage> {
                   //       : () => Navigator.of(context).maybePop(),
                   //   child: const Text('稍後再說'),
                   // ),
-
                   const SizedBox(height: 24),
 
                   // 條款
@@ -327,4 +322,3 @@ class _AuthButton extends StatelessWidget {
     );
   }
 }
-

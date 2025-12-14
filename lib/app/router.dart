@@ -2,6 +2,7 @@ import 'package:actpod_studio/features/create_story/create_story.dart';
 import 'package:actpod_studio/features/create_story/pages/story_upload_page.dart';
 import 'package:actpod_studio/features/login_page.dart';
 import 'package:actpod_studio/features/test.dart';
+import 'package:actpod_studio/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +12,12 @@ import '../features/stories_list_page.dart';
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/dashboard',
+    redirect: (context, state) {
+      if (!hasLogin) {
+        return '/login';
+      }
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/dashboard',

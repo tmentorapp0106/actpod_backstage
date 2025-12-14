@@ -134,7 +134,8 @@ class StepButton extends ConsumerWidget {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('已提交發布（示意）')));
+      ).showSnackBar(const SnackBar(content: Text('已提交發布')));
+
     } catch (e, st) {
       debugPrint('發布失敗：$e');
       debugPrint(st.toString()); // ✅ 會印出是哪一行
@@ -142,6 +143,7 @@ class StepButton extends ConsumerWidget {
         context,
       ).showSnackBar(SnackBar(content: Text('發布失敗：$e')));
     } finally {
+      ctrl.clear();
       ctrl.setSaving(false);
       ctrl.jumpTo(0); // 回到第一步
       GoRouter.of(context).go('/publish/0'); // 發布後回到第一步

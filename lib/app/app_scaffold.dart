@@ -82,7 +82,6 @@ class _SideNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    
 
     final items = [
       // _NavItem('故事館', Icons.auto_graph_rounded, '/stories'),
@@ -105,25 +104,11 @@ class _SideNav extends StatelessWidget {
                 builder: (context, ref, _) {
                   final userState = ref.watch(userControllerProvider);
 
-                  return userState.when(
-                    data: (user) => _CreatorInfoTile(
-                      name: user?.name ?? '',
-                      subtitle: user?.email ?? '',
-                      avatarUrl: (user?.avatarUrl?.isNotEmpty ?? false)
-                          ? user!.avatarUrl
-                          : null,
-                      onTap: () {},
-                    ),
-                    loading: () => const _CreatorInfoTile(
-                      name: '載入中...',
-                      subtitle: '',
-                      avatarUrl: null,
-                    ),
-                    error: (_, __) => const _CreatorInfoTile(
-                      name: '載入失敗',
-                      subtitle: '',
-                      avatarUrl: null,
-                    ),
+                  return _CreatorInfoTile(
+                    name: userState?.name ?? '未登入使用者',
+                    subtitle: userState?.email ?? '請登入以建立故事',
+                    avatarUrl: userState?.avatarUrl,
+                    onTap: () {},
                   );
                 },
               ),
@@ -146,7 +131,6 @@ class _SideNav extends StatelessWidget {
             //     },
             //   ), // 你自己的創作者資訊 Widget
             // ),
-
             const Divider(height: 1),
 
             // 2 導覽項目（可捲動）
@@ -160,12 +144,12 @@ class _SideNav extends StatelessWidget {
                     child: ListTile(
                       leading: Icon(
                         it.icon,
-                        color: selected ? Color(0xFFFFBC1F): null,
+                        color: selected ? Color(0xFFFFBC1F) : null,
                       ),
                       title: Text(
                         it.label,
                         style: TextStyle(
-                          color: selected ? Color(0xFFFFBC1F): Colors.black87,
+                          color: selected ? Color(0xFFFFBC1F) : Colors.black87,
                           fontWeight: selected
                               ? FontWeight.w600
                               : FontWeight.w400,
@@ -294,9 +278,7 @@ class _CreatorInfoTile extends StatelessWidget {
                       //   const TextSpan(text: '  •  '), // 中點分隔
                       //   TextSpan(text: '$storyCount Stories'),
                       // ],
-                      children: [
-                        TextSpan(text: '$subtitle Channels'),
-                      ],
+                      children: [TextSpan(text: '$subtitle Channels')],
                     ),
                   ),
                 ],

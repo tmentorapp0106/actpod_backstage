@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:actpod_studio/app/theme/theme.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
-import 'package:actpod_studio/shared/widgets/app_card.dart';
+import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

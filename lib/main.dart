@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/router.dart';
 import 'app/theme/theme.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
+
+bool hasLogin = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +16,7 @@ void main() async {
   
   measurementId: "G-0N5GW9EENZ"),
   );
+  setUrlStrategy(PathUrlStrategy());
   runApp(const ProviderScope(child: ActPodAdminApp()));
 }
 
