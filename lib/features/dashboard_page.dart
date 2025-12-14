@@ -1,7 +1,7 @@
 import 'package:actpod_studio/app/theme/theme.dart';
 import 'package:flutter/material.dart';
 import '../../app/app_scaffold.dart';
-import '../../shared/widgets/app_card.dart';
+import '../widgets/app_card.dart';
 
 enum SortBy { newest, oldest, mostPlayed }
 
@@ -236,7 +236,7 @@ class _StoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primary = AppTheme.seed;
+    final primary = AppTheme().theme.colorScheme.primary;
     return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(12),

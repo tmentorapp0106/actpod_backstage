@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:actpod_studio/features/api/api.dart';
 import 'package:actpod_studio/features/api/upload_system_api.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
-import 'package:actpod_studio/shared/widgets/app_card.dart';
+import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'upload_area.dart'; // ← 放到同資料夾時的匯入

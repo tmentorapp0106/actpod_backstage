@@ -1,45 +1,48 @@
+import 'package:actpod_studio/features/api/api.dart';
+import 'package:actpod_studio/features/api/channel_system_api.dart';
 import 'package:actpod_studio/features/api/user_system_api.dart';
+import 'package:actpod_studio/features/create_story/models/channel_model.dart';
+import 'package:actpod_studio/features/create_story/models/user_model.dart';
+import 'package:actpod_studio/main.dart';
+import 'package:actpod_studio/utils/cookies_util.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class UserInfo {
-  final String name;
-  final String avatarUrl;
-  final String email;
-  const UserInfo({
-    required this.name,
-    required this.avatarUrl,
-    required this.email,
-  });
-
-  factory UserInfo.fromJson(Map<String, dynamic> json) {
-  final data = json['data'] ?? {}; // 進到內層 data
-
-  return UserInfo(
-    name: data['nickname'] ?? '',
-    avatarUrl: data['avatarUrl'] ?? '',
-    email: data['email'] ?? '',
-  );
-}
-
-}
-
-class UserController extends AsyncNotifier<UserInfo?> {
+class UserController extends Notifier<UserInfo?> {
   @override
-  Future<UserInfo?> build() async {
-    final res = await UserApi().getUserInfo(); // ← 這裡呼叫你的 API
-    print('User info response: $res'); // 👈 加這行
-    return UserInfo.fromJson(res);
+  UserInfo? build() {
+    return UserInfo(userId: '', name: '', avatarUrl: '', email: '');
   }
 
-  Future<void> refreshUser() async {
-    state = const AsyncLoading();
-    state = AsyncData(await build());
+  Future<void> login(
+    String thirdPartyUserToker,
+    String? email,
+    String displayname,
+  ) async {
+    final Response = await UserApi().thirdPartyCreateUserOrLogin(
+      thirdPartyUserToker,
+      email,
+      displayname ?? "",
+    );
+    String userToken = Response.data['data']['userToken'] ?? '';
+    CookieUtils.setCookie("userToken", userToken);
+    hasLogin = true;
   }
+
+  Future<void> getUserInfo() async {
+    UserApi api = UserApi();
+    final response = await api.getUserInfo();
+    final userInfo = UserInfo.fromJson(response);
+    state = userInfo;
+    print('User info in controller: ${state?.name}');
+  }
+
 
   void clear() {
-    state = const AsyncData(null);
+    state = null;
   }
 }
 
-final userControllerProvider =
-    AsyncNotifierProvider<UserController, UserInfo?>(UserController.new);
+final userControllerProvider = NotifierProvider<UserController, UserInfo?>(
+  UserController.new,
+);

@@ -2,15 +2,16 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:actpod_studio/features/create_story/models/channel_model.dart';
 import 'package:actpod_studio/features/create_story/models/space_model.dart';
+import 'package:actpod_studio/utils/cookies_util.dart';
 import 'package:path/path.dart' as p;
 import 'package:mime/mime.dart' as m;
 import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
 
-String userToken = "";
+
 String userId = "";
-List<Space> spaces = [];
-List<Channel> channels = [];
+// List<Space> spaces = [];
+// List<Channel> channels = [];
 
 
 class DioClient {
@@ -45,7 +46,7 @@ class DioClient {
     String path,
     Map<String, dynamic> data,
   ) async {
-    _dio.options.headers["userToken"] = userToken;
+    _dio.options.headers["userToken"] = CookieUtils.getCookie("userToken");
     return await _dio.post(path, data: data);
   }
 
@@ -53,7 +54,7 @@ class DioClient {
     String path,
     Map<String, dynamic> data,
   ) async {
-    _dio.options.headers["userToken"] = userToken;
+    _dio.options.headers["userToken"] = CookieUtils.getCookie("userToken");
     return await _dio.get(path, queryParameters: data);
   }
 }

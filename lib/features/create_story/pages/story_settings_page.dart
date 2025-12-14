@@ -1,8 +1,13 @@
 import 'package:actpod_studio/app/theme/theme.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
-import 'package:actpod_studio/shared/widgets/app_card.dart';
+import 'package:actpod_studio/widgets/app_card.dart';
+import 'package:actpod_studio/widgets/avatar.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:interval_time_picker/interval_time_picker.dart';
+import 'package:interval_time_picker/models/visible_step.dart';
+import 'package:time_picker_spinner_pop_up/time_picker_spinner_pop_up.dart';
 
 class SettingsStep extends ConsumerWidget {
   const SettingsStep({super.key});
@@ -10,46 +15,111 @@ class SettingsStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final s = ref.watch(createControllerProvider);              // 狀態
-    final c = ref.read(createControllerProvider.notifier);      // 方法
+    final state = ref.watch(createControllerProvider); // 狀態
+    final ctrl = ref.read(createControllerProvider.notifier); // 方法
 
     Future<void> pickSchedule() async {
+      print("0000000000000000000000");
       final now = DateTime.now();
+      var timeMinute = now.minute;
+
       final date = await showDatePicker(
         context: context,
-        initialDate: s.scheduledAt ?? now,
+        initialDate: state.scheduledAt ?? now,
         firstDate: now,
-        lastDate: DateTime(now.year + 2),
+        lastDate: now.add(const Duration(days: 90)),
       );
       if (date == null) return;
-      final time = await showTimePicker(
+
+      final time = await showIntervalTimePicker(
         context: context,
-        initialTime: TimeOfDay.fromDateTime(s.scheduledAt ?? now),
+        initialTime: TimeOfDay.fromDateTime(DateTime.now()),
+        interval: 30,
+        visibleStep: VisibleStep.thirtieths,
       );
+      if (time!.minute % 30 != 0) {
+        final adjustedMinute = (time.minute ~/ 30) * 30;
+        timeMinute = adjustedMinute;
+      } else {
+        timeMinute = time.minute;
+      }
+
       if (time == null) return;
-      c.setScheduledAt(DateTime(date.year, date.month, date.day, time.hour, time.minute));
+      ctrl.setScheduledAt(
+        DateTime(date.year, date.month, date.day, time!.hour, timeMinute),
+      );
     }
 
     Future<void> addCollaborator() async {
+       print(state.collaborator);
       final controller = TextEditingController();
       final ok = await showDialog<bool>(
         context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('新增合作創作者'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(hintText: '輸入名稱或 Email'),
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('新增')),
-          ],
+        builder: (_) => Consumer(
+          builder: (context, ref, _) {
+            final _scrollController = ScrollController();
+
+            final state = ref.watch(createControllerProvider); // 狀態
+            final ctrl = ref.read(createControllerProvider.notifier); // 方法
+
+            return AlertDialog(
+              title: const Text('新增合作創作者'),
+              content: SizedBox(
+                width: 300,
+                height: 300,
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: controller,
+                      decoration: const InputDecoration(hintText: '輸入合作創作者名稱'),
+                      autofocus: true,
+                      onChanged: (_) {
+                        ctrl.searchUserList(controller.text);
+                        // print(state.searchUserList);
+                      },
+                    ),
+                    SizedBox(height: 12),
+
+                    Expanded(
+                      child: Scrollbar(
+                        controller: _scrollController,
+                        thumbVisibility: true,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          itemCount: state.searchUserList.length,
+                          itemBuilder: (context, index) {
+                            final name = state.searchUserList[index].name;
+                            return ListTile(
+                              title: Text(name),
+                              leading: Avatar(
+                                url: state.searchUserList[index].avatarUrl,
+                              ),
+                              onTap: () {
+                                controller.text = name;
+                                ctrl.addCollaborator(
+                                  state.searchUserList[index],
+                                );
+                                Navigator.pop(context, true);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('取消'),
+                ),
+                // FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('新增')),
+              ],
+            );
+          },
         ),
       );
-      if (ok == true && controller.text.trim().isNotEmpty) {
-        c.addCollaborator(controller.text.trim());
-      }
     }
 
     return AppCard(
@@ -58,54 +128,70 @@ class SettingsStep extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('上傳設定', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const Text(
+              '上傳設定',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 24),
 
-            // 金額 (Podcoin)
-            const _SectionTitle('金額 (Podcoin)'),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<int>(
-              value: s.pricePodcoin,
-              onChanged: (v) => c.setPrice(v ?? 0),
-              items: const [
-                DropdownMenuItem(value: 0, child: Text('免費')),
-                DropdownMenuItem(value: 10, child: Text('10 Podcoin')),
-                DropdownMenuItem(value: 20, child: Text('20 Podcoin')),
-                DropdownMenuItem(value: 50, child: Text('50 Podcoin')),
-              ],
-              decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-
-            const SizedBox(height: 28),
+            // // 金額 (Podcoin)
+            // const _SectionTitle('金額 (Podcoin)'),
+            // const SizedBox(height: 8),
+            // DropdownButtonFormField<int>(
+            //   value: state.pricePodcoin,
+            //   onChanged: (v) => ctrl.setPrice(v ?? 0),
+            //   items: const [
+            //     DropdownMenuItem(value: 0, child: Text('免費')),
+            //     DropdownMenuItem(value: 10, child: Text('10 Podcoin')),
+            //     DropdownMenuItem(value: 20, child: Text('20 Podcoin')),
+            //     DropdownMenuItem(value: 30, child: Text('30 Podcoin')),
+            //     DropdownMenuItem(value: 50, child: Text('50 Podcoin')),
+            //     DropdownMenuItem(value: 100, child: Text('100 Podcoin')),
+            //     DropdownMenuItem(value: 150, child: Text('150 Podcoin')),
+            //     DropdownMenuItem(value: 200, child: Text('200 Podcoin')),
+            //     DropdownMenuItem(value: 500, child: Text('500 Podcoin')),
+            //   ],
+            //   decoration: InputDecoration(
+            //     contentPadding: const EdgeInsets.symmetric(
+            //       horizontal: 14,
+            //       vertical: 12,
+            //     ),
+            //     border: OutlineInputBorder(
+            //       borderRadius: BorderRadius.circular(12),
+            //     ),
+            //   ),
+            // ),
+            // const SizedBox(height: 28),
             const _SectionTitle('發布時間'),
             const SizedBox(height: 12),
             Row(
               children: [
                 _ModeButton(
                   label: '即時',
-                  selected: s.publishMode == PublishMode.now,
-                  onTap: () => c.setPublishMode(PublishMode.now),
+                  selected: state.publishMode == PublishMode.now,
+                  onTap: () => ctrl.setPublishMode(PublishMode.now),
                   theme: theme,
                 ),
                 const SizedBox(width: 12),
                 _ModeButton(
                   label: '排程',
-                  selected: s.publishMode == PublishMode.schedule,
+                  selected: state.publishMode == PublishMode.schedule,
                   onTap: () async {
-                    c.setPublishMode(PublishMode.schedule);
+                    ctrl.setPublishMode(PublishMode.schedule);
                     await pickSchedule();
                   },
                   theme: theme,
                 ),
                 const Spacer(),
-                if (s.publishMode == PublishMode.schedule)
+                if (state.publishMode == PublishMode.schedule)
                   TextButton.icon(
                     onPressed: pickSchedule,
                     icon: const Icon(Icons.event_outlined),
-                    label: Text(s.scheduledAt == null ? '選擇時間' : _fmtDateTime(s.scheduledAt!)),
+                    label: Text(
+                      state.scheduledAt == null
+                          ? '選擇時間'
+                          : _fmtDateTime(state.scheduledAt!),
+                    ),
                   ),
               ],
             ),
@@ -115,57 +201,66 @@ class SettingsStep extends ConsumerWidget {
               children: [
                 const _SectionTitle('合作創作者'),
                 const SizedBox(width: 8),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  onPressed: addCollaborator,
-                  icon: const Icon(Icons.add_circle_outline),
+                Visibility(
+                  visible: state.collaborator!.userId == "",
+                  child: IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: addCollaborator,
+                    icon: const Icon(Icons.add_circle_outline),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            Text('此創作者也可回覆聽眾留言',
-                style: TextStyle(color: Colors.black54.withOpacity(.5))),
+
+            Text(
+              '此創作者也可回覆聽眾留言',
+              style: TextStyle(color: Colors.black54.withOpacity(.5)),
+            ),
             const SizedBox(height: 12),
 
-            if (s.collaborators.isEmpty)
+            if (state.collaborator!.userId == "")
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
-                child: const Text('尚未新增合作創作者', style: TextStyle(color: Colors.black54)),
+                child: const Text(
+                  '尚未新增合作創作者',
+                  style: TextStyle(color: Colors.black54),
+                ),
               )
             else
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final name in s.collaborators)
-                    InputChip(
-                      label: Text(name),
-                      onDeleted: () => c.removeCollaborator(name),
+                  InputChip(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
+                    avatar: Avatar(
+                      url: state.collaborator?.avatarUrl ?? "",
+                      radius: 40,
+                    ),
+                    label: Text(state.collaborator?.name ?? ""),
+                    onDeleted: () {
+                      ctrl.removeCollaborator();
+                      print(state.collaborator);
+                    },
+                  ),
                 ],
               ),
 
             const SizedBox(height: 24),
             const Divider(height: 32),
-            // Row(
-            //   children: [
-            //     OutlinedButton(
-            //       onPressed: s.canPrev ? c.prevStep : null,
-            //       child: const Text('上一步'),
-            //     ),
-            //     const Spacer(),
-            //     FilledButton(
-            //       onPressed: c.nextStep,
-            //       child: const Text('下一步'),
-            //     ),
-            //   ],
-            // ),
           ],
         ),
       ),
@@ -178,7 +273,10 @@ class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.text);
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700));
+    return Text(
+      text,
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+    );
   }
 }
 
@@ -215,15 +313,12 @@ class _ModeButton extends StatelessWidget {
         ),
         child: Text(
           label, // ✅ 改這裡
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
     );
   }
 }
-
 
 String _fmtDateTime(DateTime dt) {
   String two(int n) => n.toString().padLeft(2, '0');

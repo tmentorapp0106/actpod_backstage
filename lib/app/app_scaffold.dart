@@ -57,17 +57,17 @@ class _TopBar extends StatelessWidget {
                 child: SvgPicture.asset('assets/images/logo.svg', height: 32),
               ),
               const SizedBox(width: 12),
-              IconButton(
-                tooltip: '通知',
-                onPressed: () {},
-                icon: const Icon(Icons.notifications_none_rounded, size: 24),
-              ),
-              const SizedBox(width: 4),
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: AppTheme.seed.withOpacity(.15),
-                child: const Icon(Icons.person, color: AppTheme.seed, size: 18),
-              ),
+              // IconButton(
+              //   tooltip: '通知',
+              //   onPressed: () {},
+              //   icon: const Icon(Icons.notifications_none_rounded, size: 24),
+              // ),
+              // const SizedBox(width: 4),
+              // CircleAvatar(
+              //   radius: 16,
+              //   backgroundColor: AppTheme().theme.colorScheme.primary.withOpacity(.15),
+              //   child: const Icon(Icons.person, color: Color(0xFFFFBC1F), size: 18),
+              // ),
             ],
           ),
         ),
@@ -82,7 +82,6 @@ class _SideNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    
 
     final items = [
       // _NavItem('故事館', Icons.auto_graph_rounded, '/stories'),
@@ -105,25 +104,11 @@ class _SideNav extends StatelessWidget {
                 builder: (context, ref, _) {
                   final userState = ref.watch(userControllerProvider);
 
-                  return userState.when(
-                    data: (user) => _CreatorInfoTile(
-                      name: user?.name ?? '',
-                      subtitle: user?.email ?? '',
-                      avatarUrl: (user?.avatarUrl.isNotEmpty ?? false)
-                          ? user!.avatarUrl
-                          : null,
-                      onTap: () {},
-                    ),
-                    loading: () => const _CreatorInfoTile(
-                      name: '載入中...',
-                      subtitle: '',
-                      avatarUrl: null,
-                    ),
-                    error: (_, __) => const _CreatorInfoTile(
-                      name: '載入失敗',
-                      subtitle: '',
-                      avatarUrl: null,
-                    ),
+                  return _CreatorInfoTile(
+                    name: userState?.name ?? '未登入使用者',
+                    subtitle: userState?.email ?? '請登入以建立故事',
+                    avatarUrl: userState?.avatarUrl,
+                    onTap: () {},
                   );
                 },
               ),
@@ -146,7 +131,6 @@ class _SideNav extends StatelessWidget {
             //     },
             //   ), // 你自己的創作者資訊 Widget
             // ),
-
             const Divider(height: 1),
 
             // 2 導覽項目（可捲動）
@@ -160,12 +144,12 @@ class _SideNav extends StatelessWidget {
                     child: ListTile(
                       leading: Icon(
                         it.icon,
-                        color: selected ? AppTheme.seed : null,
+                        color: selected ? Color(0xFFFFBC1F) : null,
                       ),
                       title: Text(
                         it.label,
                         style: TextStyle(
-                          color: selected ? AppTheme.seed : Colors.black87,
+                          color: selected ? Color(0xFFFFBC1F) : Colors.black87,
                           fontWeight: selected
                               ? FontWeight.w600
                               : FontWeight.w400,
@@ -179,7 +163,7 @@ class _SideNav extends StatelessWidget {
                           ? Colors.transparent
                           : const Color.fromARGB(245, 245, 245, 245), // ✅ 修正後
                       tileColor: selected
-                          ? AppTheme.seed.withOpacity(.1)
+                          ? Color(0xFFFFBC1F).withOpacity(.1)
                           : Colors.white,
                       onTap: () => context.go(it.path),
                     ),
@@ -246,7 +230,7 @@ class _CreatorInfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final seed = AppTheme.seed;
+    final seed = AppTheme().theme.colorScheme.primary;
 
     return InkWell(
       onTap: onTap,
@@ -294,9 +278,7 @@ class _CreatorInfoTile extends StatelessWidget {
                       //   const TextSpan(text: '  •  '), // 中點分隔
                       //   TextSpan(text: '$storyCount Stories'),
                       // ],
-                      children: [
-                        TextSpan(text: '$subtitle Channels'),
-                      ],
+                      children: [TextSpan(text: '$subtitle Channels')],
                     ),
                   ),
                 ],

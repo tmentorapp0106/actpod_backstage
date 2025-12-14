@@ -1,8 +1,12 @@
 // lib/features/create_story/controllers/create_controller.dart
 import 'dart:typed_data';
 import 'package:actpod_studio/features/api/api.dart';
+import 'package:actpod_studio/features/api/channel_system_api.dart';
+import 'package:actpod_studio/features/api/space_system_api.dart';
+import 'package:actpod_studio/features/api/user_system_api.dart';
 import 'package:actpod_studio/features/create_story/models/channel_model.dart';
 import 'package:actpod_studio/features/create_story/models/space_model.dart';
+import 'package:actpod_studio/features/create_story/models/user_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -85,7 +89,8 @@ class CreateState {
   final int pricePodcoin; // 0 = 免費
   final PublishMode publishMode; // 即時 / 排程
   final DateTime? scheduledAt; // 排程時間（publishMode == schedule）
-  final List<String> collaborators; // 合作創作者（名稱或 email）
+  final UserInfo? collaborator; // 合作創作者（名稱或 email）
+  final List<UserInfo> searchUserList; // 搜尋到的使用者清單
 
   // ===== Others =====
   final bool isSaving;
@@ -113,7 +118,9 @@ class CreateState {
     this.pricePodcoin = 0,
     this.publishMode = PublishMode.now,
     this.scheduledAt,
-    this.collaborators = const [],
+    this.collaborator,
+    this.searchUserList = const [],
+
     // Others
     this.isSaving = false,
     this.error,
@@ -139,15 +146,19 @@ class CreateState {
       case 0: // Upload
         return audios.isNotEmpty;
       case 1: // Detail
-        return (title?.trim().isNotEmpty ?? false);
-      case 2: // Highlight
-        return selectionEnd > selectionStart && highlightLength > Duration.zero;
-      case 3: // Settings
+        return (title != null && title!.trim().isNotEmpty) &&
+            (description != null && description!.trim().isNotEmpty) &&
+            (selectedSpace != null && selectedSpace!.isNotEmpty) &&
+            (selectedChannel != null && selectedChannel!.isNotEmpty) &&
+            (imageFileBytes != null);
+      // case 2: // Highlight
+      //   return selectionEnd > selectionStart && highlightLength > Duration.zero;
+      case 2: // Settings
         if (publishMode == PublishMode.schedule) {
           return scheduledAt != null;
         }
         return true;
-      case 4: // Preview
+      case 3: // Preview
         return true;
       default:
         return false;
@@ -180,7 +191,8 @@ class CreateState {
     int? pricePodcoin,
     PublishMode? publishMode,
     DateTime? scheduledAt, // 傳入 null 代表清空
-    List<String>? collaborators,
+    UserInfo? collaborator,
+    List<UserInfo>? searchUserList,
     // Others
     bool? isSaving,
     String? error,
@@ -206,8 +218,9 @@ class CreateState {
       // Settings
       pricePodcoin: pricePodcoin ?? this.pricePodcoin,
       publishMode: publishMode ?? this.publishMode,
-      scheduledAt: scheduledAt, // 允許覆寫為 null
-      collaborators: collaborators ?? this.collaborators,
+      scheduledAt: scheduledAt ?? this.scheduledAt, 
+      collaborator: collaborator ?? this.collaborator,
+      searchUserList: searchUserList ?? this.searchUserList,
       // Others
       isSaving: isSaving ?? this.isSaving,
       error: error,
@@ -236,7 +249,7 @@ class CreateState {
       'pricePodcoin': pricePodcoin,
       'publishMode': publishMode.name, // Enum 轉字串
       'scheduledAt': scheduledAt?.toIso8601String(),
-      'collaborators': collaborators,
+      'collaborator': collaborator,
 
       // ===== Others =====
       'isSaving': isSaving,
@@ -256,18 +269,13 @@ class CreateController extends Notifier<CreateState> {
   CreateState build() {
     return CreateState(
       currentPage: 0,
-      spaces: spaces,
-      channels: channels,
+      spaces: [],
+      channels: [],
       pricePodcoin: 0,
       publishMode: PublishMode.now,
       scheduledAt: null,
-      collaborators: [],
+      collaborator: null,
     );
-  }
-
-  // 設定 isSaving
-  void setSaving(bool saving) {
-    state = state.copyWith(isSaving: saving);
   }
 
   // -------------------------
@@ -290,47 +298,33 @@ class CreateController extends Notifier<CreateState> {
     state = state.copyWith(currentPage: i, error: null);
   }
 
-  // 舊命名轉接
-  void nextStep() => next();
-  void prevStep() => back();
-
-  // -------------------------
-  // Detail setters
-  // -------------------------
-  void setTitle(String v) => state = state.copyWith(title: v);
-  void setDescription(String v) => state = state.copyWith(description: v);
-  void setSpace(String? v) => state = state.copyWith(selectedSpace: v);
-  void setChannel(String? v) => state = state.copyWith(selectedChannel: v);
-
-  // 封面
-  Future<void> pickCover() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        withData: true,
-        allowMultiple: false,
-      );
-      if (result == null || result.files.isEmpty) return;
-      final file = result.files.first;
-      final data = file.bytes;
-      if (data == null) return;
-      state = state.copyWith(
-        imageFileBytes: Uint8List.fromList(data),
-        imageFileName: file.name,
-      );
-    } catch (e, st) {
-      if (kDebugMode) {
-        // 可換成你的 logger
-        print('pickCover error: $e\n$st');
-      }
-    }
+  void clear() {
+    state=state.copyWith(
+      currentPage: 0,
+      title: null,
+      description: null,
+      selectedSpace: null,
+      selectedChannel: null,
+      imageFileName: null,
+      imageFileBytes: null,
+      audios: [],
+      selectedAudioId: null,
+      highlightLength: const Duration(seconds: 20),
+      selectionStart: Duration.zero,
+      selectionEnd: const Duration(seconds: 20),
+      transitionMusicPath: null,
+      pricePodcoin: 0,
+      publishMode: PublishMode.now,
+      scheduledAt: null,
+      collaborator: null,
+      searchUserList: [],
+      isSaving: false,
+      error: null,
+    );
   }
 
-  void clearCover() =>
-      state = state.copyWith(imageFileBytes: null, imageFileName: null);
-
   // -------------------------
-  // Upload / Audio
+  // 1 Upload / Audio
   // -------------------------
 
   void setAudioFiles(List<PlatformFile> files) {
@@ -578,7 +572,62 @@ class CreateController extends Notifier<CreateState> {
   }
 
   // -------------------------
-  // Highlight
+  // 2 Detail setters
+  // -------------------------
+  Future<void> getSpaceList() async {
+    final spaceResponse = await SpaceApi().getSpaces();
+    final spaceListData = spaceResponse.data['data'] as List;
+    state = state.copyWith(
+      spaces: spaceListData
+          .whereType<Map<String, dynamic>>()
+          .map((e) => Space.fromJson(e))
+          .toList(),
+    );
+  }
+
+  void getUserChannels(String userId) async {
+    final channelResponse = await ChannelApi().getUserChannels(userId);
+    final channelListData = channelResponse.data['data'] as List;
+    state = state.copyWith(
+      channels: channelListData.map((e) {
+        return Channel.fromJson(e);
+      }).toList(),
+    );
+  }
+
+  void setTitle(String v) => state = state.copyWith(title: v);
+  void setDescription(String v) => state = state.copyWith(description: v);
+  void setSpace(String? v) => state = state.copyWith(selectedSpace: v);
+  void setChannel(String? v) => state = state.copyWith(selectedChannel: v);
+
+  Future<void> pickCover() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+        allowMultiple: false,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      final data = file.bytes;
+      if (data == null) return;
+      state = state.copyWith(
+        imageFileBytes: Uint8List.fromList(data),
+        imageFileName: file.name,
+      );
+    } catch (e, st) {
+      if (kDebugMode) {
+        // 可換成你的 logger
+        // print('pickCover error: $e\n$st');
+      }
+    }
+  }
+
+  void clearCover() =>
+      state = state.copyWith(imageFileBytes: null, imageFileName: null);
+
+  // -------------------------
+  // 3 Highlight
   // -------------------------
   void setHighlightLength(Duration d) {
     final audioLen = state.currentAudioDuration;
@@ -586,7 +635,6 @@ class CreateController extends Notifier<CreateState> {
     state = state.copyWith(highlightLength: d, selectionEnd: end);
   }
 
-  /// 移動精華「起點」，終點 = 起點 + highlightLength（自動夾限於音檔長度）
   void setSelection({required Duration start}) {
     final audioLen = state.currentAudioDuration;
     final clampedStart = _clamp(start, Duration.zero, audioLen);
@@ -594,11 +642,8 @@ class CreateController extends Notifier<CreateState> {
     state = state.copyWith(selectionStart: clampedStart, selectionEnd: end);
   }
 
-  void setTransitionMusic(String? path) =>
-      state = state.copyWith(transitionMusicPath: path);
-
   // -------------------------
-  // Settings
+  // 4 Settings
   // -------------------------
   void setPrice(int podcoin) => state = state.copyWith(pricePodcoin: podcoin);
 
@@ -615,20 +660,37 @@ class CreateController extends Notifier<CreateState> {
 
   void clearScheduledAt() => state = state.copyWith(scheduledAt: null);
 
-  void addCollaborator(String nameOrEmail) {
-    final v = nameOrEmail.trim();
-    if (v.isEmpty) return;
-    final set = {...state.collaborators, v}; // 去重
-    state = state.copyWith(collaborators: set.toList());
+  Future<void> searchUserList(String text) async {
+    print(
+      "213546848468465454545645645641222222244444444444444864546456456454312168464",
+    );
+    final keyword = text.trim();
+    if (keyword.isEmpty) {
+      state = state.copyWith(searchUserList: []);
+      return;
+    }
+    final res = await UserApi().searchUser(keyword);
+    print(res);
+    final users = res["data"]
+        .map<UserInfo>((json) => UserInfo.fromJson(json))
+        .toList();
+
+    state = state.copyWith(searchUserList: users);
+    print(state.searchUserList);
+
+    print("000000000000000000000000000000000000000000000000000000000000000");
   }
 
-  void removeCollaborator(String nameOrEmail) {
-    final list = [...state.collaborators]..remove(nameOrEmail);
-    state = state.copyWith(collaborators: list);
+  void addCollaborator(UserInfo collerator) {
+    state = state.copyWith(collaborator: collerator);
+  }
+
+  void removeCollaborator() {
+    state = state.copyWith(collaborator: UserInfo(userId: "", name: "", avatarUrl: "", email: ""));
   }
 
   // -------------------------
-  // Submit（僅 Preview 頁可送出）
+  // 5 Submit（僅 Preview 頁可送出）
   // -------------------------
   Future<void> submit() async {
     if (state.currentPage != 2) return;
@@ -640,6 +702,11 @@ class CreateController extends Notifier<CreateState> {
     } catch (e) {
       state = state.copyWith(isSaving: false, error: e.toString());
     }
+  }
+
+  // 設定 isSaving
+  void setSaving(bool saving) {
+    state = state.copyWith(isSaving: saving);
   }
 
   // -------------------------

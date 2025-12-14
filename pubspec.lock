@@ -392,6 +392,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
+  interval_time_picker:
+    dependency: "direct main"
+    description:
+      name: interval_time_picker
+      sha256: b7c28d89b3cf21f4059288bbd42b6079e04d1462affa9ad54cff1d1eedf9583d
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.0+12"
+  intl:
+    dependency: transitive
+    description:
+      name: intl
+      sha256: "3df61194eb431efc39c4ceba583b95633a403f46c9fd341e550ce0bfa50e9aa5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.20.2"
   io:
     dependency: transitive
     description:
@@ -425,7 +441,7 @@ packages:
     source: hosted
     version: "4.6.0"
   just_audio_web:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: just_audio_web
       sha256: "6ba8a2a7e87d57d32f0f7b42856ade3d6a9fbe0f1a11fabae0a4f00bb73f0663"
@@ -805,6 +821,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.11"
+  time_picker_spinner_pop_up:
+    dependency: "direct main"
+    description:
+      name: time_picker_spinner_pop_up
+      sha256: "245fd1ad9eb2a6ec800e06b933a06829c2d91757f70591ea0dc6b5236a754013"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
   typed_data:
     dependency: transitive
     description:
