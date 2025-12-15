@@ -70,11 +70,12 @@ class CreateState {
   final String? selectedSpace;
   final List<Channel> channels;
   final String? selectedChannel;
-  final String? imageFileName;
-  final Uint8List? imageFileBytes;
+  final List<String>? imageFilePaths;
+  final List<Uint8List>? imageFilesBytes;
 
   // ===== Upload / Highlight =====
   final List<UploadedAudio> audios;
+  final bool uploadingAudio;
   final String? selectedAudioId;
 
   /// 精華長度（例如 20 秒）
@@ -105,10 +106,11 @@ class CreateState {
     this.selectedSpace,
     this.channels = const [],
     this.selectedChannel,
-    this.imageFileName,
-    this.imageFileBytes,
+    this.imageFilePaths,
+    this.imageFilesBytes,
     // Upload / Highlight
     this.audios = const [],
+    this.uploadingAudio = false,
     this.selectedAudioId,
     this.highlightLength = const Duration(seconds: 20),
     this.selectionStart = Duration.zero,
@@ -150,7 +152,7 @@ class CreateState {
             (description != null && description!.trim().isNotEmpty) &&
             (selectedSpace != null && selectedSpace!.isNotEmpty) &&
             (selectedChannel != null && selectedChannel!.isNotEmpty) &&
-            (imageFileBytes != null);
+            (imageFilesBytes != null);
       // case 2: // Highlight
       //   return selectionEnd > selectionStart && highlightLength > Duration.zero;
       case 2: // Settings
@@ -178,10 +180,11 @@ class CreateState {
     String? selectedSpace,
     List<Channel>? channels,
     String? selectedChannel,
-    String? imageFileName,
-    Uint8List? imageFileBytes,
+    List<String>? imageFilePaths,
+    List<Uint8List>? imageFilesBytes,
     // Upload / Highlight
     List<UploadedAudio>? audios,
+    bool? uploadingAudio,
     String? selectedAudioId,
     Duration? highlightLength,
     Duration? selectionStart,
@@ -206,10 +209,11 @@ class CreateState {
       selectedSpace: selectedSpace ?? this.selectedSpace,
       channels: channels ?? this.channels,
       selectedChannel: selectedChannel ?? this.selectedChannel,
-      imageFileName: imageFileName ?? this.imageFileName,
-      imageFileBytes: imageFileBytes ?? this.imageFileBytes,
+      imageFilePaths: imageFilePaths ?? this.imageFilePaths,
+      imageFilesBytes: imageFilesBytes ?? this.imageFilesBytes,
       // Upload / Highlight
       audios: audios ?? this.audios,
+      uploadingAudio: uploadingAudio?? this.uploadingAudio,
       selectedAudioId: selectedAudioId ?? this.selectedAudioId,
       highlightLength: highlightLength ?? this.highlightLength,
       selectionStart: selectionStart ?? this.selectionStart,
@@ -305,8 +309,8 @@ class CreateController extends Notifier<CreateState> {
       description: null,
       selectedSpace: null,
       selectedChannel: null,
-      imageFileName: null,
-      imageFileBytes: null,
+      imageFilePaths: null,
+      imageFilesBytes: null,
       audios: [],
       selectedAudioId: null,
       highlightLength: const Duration(seconds: 20),
@@ -475,6 +479,10 @@ class CreateController extends Notifier<CreateState> {
     }
   }
 
+  void setLoadingAudio(bool isLoading) {
+    state = state.copyWith(uploadingAudio: isLoading);
+  }
+
   /// 附加音檔（不覆蓋既有清單）
   void appendAudioFiles(List<PlatformFile> files) {
     if (files.isEmpty) return;
@@ -501,17 +509,6 @@ class CreateController extends Notifier<CreateState> {
       audios: list,
       selectedAudioId: selectedId,
       error: null,
-    );
-  }
-
-  /// 單筆加入（常用於拖拉單檔）
-  void addAudio(UploadedAudio audio) {
-    final list = [...state.audios, audio];
-    state = state.copyWith(
-      audios: list,
-      selectedAudioId: state.selectedAudioId ?? audio.id,
-      selectionStart: Duration.zero,
-      selectionEnd: _minDuration(state.highlightLength, audio.duration),
     );
   }
 
@@ -605,17 +602,24 @@ class CreateController extends Notifier<CreateState> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
         withData: true,
-        allowMultiple: false,
+        allowMultiple: true,
       );
       if (result == null || result.files.isEmpty) return;
-      final file = result.files.first;
-      final data = file.bytes;
-      if (data == null) return;
+      final imageBytesList = <Uint8List>[];
+      final imagePathList = <String>[];
+
+      final filesWithBytes =  result.files.where((f) => f.bytes != null).toList();
+      if (filesWithBytes.isEmpty) return;
+
+      for (final file in filesWithBytes) {
+        imageBytesList.add(file.bytes!);
+        imagePathList.add(file.name);
+      }
       state = state.copyWith(
-        imageFileBytes: Uint8List.fromList(data),
-        imageFileName: file.name,
+        imageFilesBytes: imageBytesList,
+        imageFilePaths: imagePathList,
       );
-    } catch (e, st) {
+    } catch (e) {
       if (kDebugMode) {
         // 可換成你的 logger
         // print('pickCover error: $e\n$st');
@@ -623,8 +627,32 @@ class CreateController extends Notifier<CreateState> {
     }
   }
 
+  void reorderCovers(int oldIndex, int newIndex) {
+    final bytes = [...(state.imageFilesBytes ?? const <Uint8List>[])];
+    final paths = [...(state.imageFilePaths ?? const <String>[])];
+
+    if (bytes.isEmpty || paths.isEmpty) return;
+    if (oldIndex < 0 || oldIndex >= bytes.length) return;
+
+    // ReorderableListView quirk:
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+
+    final movedBytes = bytes.removeAt(oldIndex);
+    final movedPath = paths.removeAt(oldIndex);
+
+    bytes.insert(newIndex, movedBytes);
+    paths.insert(newIndex, movedPath);
+
+    state = state.copyWith(
+      imageFilesBytes: bytes,
+      imageFilePaths: paths,
+    );
+  }
+
   void clearCover() =>
-      state = state.copyWith(imageFileBytes: null, imageFileName: null);
+      state = state.copyWith(imageFilesBytes: null, imageFilePaths: null);
 
   // -------------------------
   // 3 Highlight
@@ -661,9 +689,6 @@ class CreateController extends Notifier<CreateState> {
   void clearScheduledAt() => state = state.copyWith(scheduledAt: null);
 
   Future<void> searchUserList(String text) async {
-    print(
-      "213546848468465454545645645641222222244444444444444864546456456454312168464",
-    );
     final keyword = text.trim();
     if (keyword.isEmpty) {
       state = state.copyWith(searchUserList: []);
@@ -676,9 +701,6 @@ class CreateController extends Notifier<CreateState> {
         .toList();
 
     state = state.copyWith(searchUserList: users);
-    print(state.searchUserList);
-
-    print("000000000000000000000000000000000000000000000000000000000000000");
   }
 
   void addCollaborator(UserInfo collerator) {

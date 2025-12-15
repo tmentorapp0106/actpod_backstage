@@ -45,7 +45,6 @@ class StepButton extends ConsumerWidget {
           if (stepIndex > 0) {
             ctrl.back();
             context.go('/publish/${state.currentPage - 1}');
-            print('Go to /publish/${state.currentPage}');
           }
         },
         onNext: () {
@@ -54,7 +53,6 @@ class StepButton extends ConsumerWidget {
             if (!canNext) return; // 防呆
             ctrl.next();
             context.go('/publish/${state.currentPage + 1}');
-            print('Go to /publish/${state.currentPage}');
            
           } else {
             _submit(context, ref); // 內部會 setSaving(true/false)
@@ -84,10 +82,11 @@ class StepButton extends ConsumerWidget {
         createState.audios[0].fileName,
         createState.audios[0].fileBytes,
       );
-      String imageUrl = await UploadApi().uploadStoryImage(
-        createState.imageFileName!,
-        createState.imageFileBytes!,
+      final uploadImageFutures = List.generate(
+        createState.imageFilePaths?.length?? 0,
+        (i) => UploadApi().uploadStoryImage(createState.imageFilePaths![i], createState.imageFilesBytes![i]),
       );
+      final List<String> imageUrls = await Future.wait(uploadImageFutures);
 
       final spaceId = createState.spaces
           .where((space) => space.name == createState.selectedSpace)
@@ -105,7 +104,7 @@ class StepButton extends ConsumerWidget {
         contentUrl,
         createState.title!,
         createState.description!,
-        [imageUrl],
+        imageUrls,
         createState.audios[0].duration.inMilliseconds,
         (createState.audios[0].duration.inMilliseconds / 2).toInt(),
         (createState.audios[0].duration.inMilliseconds / 2).toInt() + 20 * 1000,

@@ -19,7 +19,6 @@ class SettingsStep extends ConsumerWidget {
     final ctrl = ref.read(createControllerProvider.notifier); // 方法
 
     Future<void> pickSchedule() async {
-      print("0000000000000000000000");
       final now = DateTime.now();
       var timeMinute = now.minute;
 
@@ -202,7 +201,7 @@ class SettingsStep extends ConsumerWidget {
                 const _SectionTitle('合作創作者'),
                 const SizedBox(width: 8),
                 Visibility(
-                  visible: state.collaborator!.userId == "",
+                  visible: state.collaborator == null || state.collaborator?.userId == "",
                   child: IconButton(
                     visualDensity: VisualDensity.compact,
                     onPressed: addCollaborator,
@@ -219,7 +218,7 @@ class SettingsStep extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            if (state.collaborator!.userId == "")
+            if (state.collaborator == null || state.collaborator!.userId == "")
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(

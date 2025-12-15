@@ -45,7 +45,7 @@ class PreviewStep extends ConsumerWidget {
           selectedSpace:selectedSpace,
           authorName: authorName.isNotEmpty ? authorName : '作者',
           coverUrl: coverUrl,
-          imageBytes: state.imageFileBytes!,
+          imageBytes: state.imageFilesBytes!.first,
           // 若是排程則顯示排程時間，否則顯示現在（或你的建立時間）
           dateTime: isScheduled ? scheduledAt ?? DateTime.now() : DateTime.now(),
           showNewBadge: !isScheduled,

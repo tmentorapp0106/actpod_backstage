@@ -8,7 +8,7 @@ class UserApi {
     String nickname,
   ) async {
     var postData = {
-      "thirdPartyUserId": thirdPartyUserId,
+      "firebaseToken": thirdPartyUserId,
       "thirdPartyEmail": email,
       "thirdPartyNickname": nickname,
     };
@@ -17,6 +17,7 @@ class UserApi {
       "/user/signupOrLoginWithThirdParty/v2",
       postData,
     );
+
 
     return response;
   }

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:actpod_studio/app/theme/theme.dart';
 import 'package:actpod_studio/features/api/api.dart';
 import 'package:actpod_studio/features/api/upload_system_api.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
@@ -23,18 +24,29 @@ class UploadStep extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             UploadArea(
-              allowedExtensions: const ['mp3', 'aac','m4a'],
+              allowedExtensions: const ['mp3'],
               onChanged: (files) async {
                 ctrl.setAudioFiles(files);
               },
             ),
             const SizedBox(height: 12),
 
+            if(state.uploadingAudio)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: context.color.brand,
+                  ),
+                ],
+              ),
+
             if (state.audios.isNotEmpty) ...[
               Row(
                 children: [
                   Text(
-                    '已選擇 ${state.audios.length} 個檔案',
+                    '已選擇檔案',
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const Spacer(),

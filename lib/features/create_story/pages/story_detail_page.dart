@@ -22,7 +22,7 @@ class DetailStep extends ConsumerWidget {
     final String? selectedSpace = ctrl.state.selectedSpace;
     final List<Channel> channels = ctrl.state.channels ?? const [];
     final String? selectedChannel = ctrl.state.selectedChannel;
-    final Uint8List? coverBytes = ctrl.state.imageFileBytes;
+    final List<Uint8List>? coversBytes = ctrl.state.imageFilesBytes;
 
     return AppCard(
       child: Padding(
@@ -117,16 +117,49 @@ class DetailStep extends ConsumerWidget {
             // 封面上傳
             Text('封面圖片', style: theme.textTheme.bodyMedium),
             const SizedBox(height: 8),
-            _CoverPicker(
-              bytes: coverBytes,
-              onPick: () =>
-                  ref.read(createControllerProvider.notifier).pickCover(),
-              onRemove: coverBytes == null
-                  ? null
-                  : () => ref
-                        .read(createControllerProvider.notifier)
-                        .clearCover(),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FilledButton.icon(
+                  onPressed: () =>
+                      ref.read(createControllerProvider.notifier).pickCover(),
+                  icon: const Icon(Icons.upload_rounded),
+                  label: const Text('上傳圖片'),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '建議 1:1（例如 800×800）',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.hintColor,
+                  ),
+                ),
+              ],
             ),
+            SizedBox(
+              width: 500,
+              height: 130,
+              child: ReorderableListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: coversBytes?.length?? 0,
+                itemBuilder: (context, index) {
+                  return _CoverPicker(
+                    key: ValueKey("cover-$index"),
+                    index: index,
+                    bytes: coversBytes?[index],
+                    onRemove: coversBytes == null
+                        ? null
+                        : () => ref
+                              .read(createControllerProvider.notifier)
+                              .clearCover(),
+                  );
+                }, 
+                onReorder: (int oldIndex, int newIndex) { 
+                  ref.read(createControllerProvider.notifier).reorderCovers(oldIndex, newIndex);
+                }, 
+              )
+            ),
+            
 
             const SizedBox(height: 24),
 
@@ -152,13 +185,14 @@ class DetailStep extends ConsumerWidget {
 }
 
 class _CoverPicker extends StatelessWidget {
+  final int index;
   final Uint8List? bytes;
-  final VoidCallback onPick;
   final VoidCallback? onRemove;
 
   const _CoverPicker({
+    super.key,
+    required this.index,
     required this.bytes,
-    required this.onPick,
     this.onRemove,
   });
 
@@ -171,42 +205,24 @@ class _CoverPicker extends StatelessWidget {
     );
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // 預覽框或占位
-        Container(
-          width: 96,
-          height: 96,
-          decoration: ShapeDecoration(shape: border),
-          clipBehavior: Clip.antiAlias,
-          child: bytes == null
-              ? Icon(Icons.image_outlined, size: 32, color: theme.hintColor)
-              : Image.memory(bytes!, fit: BoxFit.cover),
-        ),
-        const SizedBox(width: 12),
         Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            FilledButton.icon(
-              onPressed: onPick,
-              icon: const Icon(Icons.upload_rounded),
-              label: const Text('上傳圖片'),
-            ),
-            const SizedBox(height: 8),
-            // if (onRemove != null)
-            //   TextButton.icon(
-            //     onPressed: onRemove,
-            //     icon: const Icon(Icons.delete_outline),
-            //     label: const Text('移除'),
-            //   ),
-            Text(
-              '建議 1:1（例如 800×800）',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.hintColor,
-              ),
+            Container(
+              width: 96,
+              height: 96,
+              decoration: ShapeDecoration(shape: border),
+              clipBehavior: Clip.antiAlias,
+              child: bytes == null
+                  ? Icon(Icons.image_outlined, size: 32, color: theme.hintColor)
+                  : Image.memory(bytes!, fit: BoxFit.cover),
             ),
           ],
         ),
-      ],
+        SizedBox(width: 8,)
+      ]
     );
   }
 }

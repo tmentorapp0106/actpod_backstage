@@ -17,7 +17,7 @@ String userId = "";
 class DioClient {
   static final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://apiv1.actpodapp.com',
+      baseUrl: 'https://gateway-1033518616359.asia-east1.run.app',
       connectTimeout: const Duration(
         seconds: 15,
       ).inMilliseconds, // ✅ 用 inMilliseconds
