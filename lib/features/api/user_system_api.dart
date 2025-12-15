@@ -14,7 +14,7 @@ class UserApi {
     };
 
     Response response = await DioClient.handelPost(
-      "/user/signupOrLoginWithThirdParty",
+      "/user/signupOrLoginWithThirdParty/v2",
       postData,
     );
 
