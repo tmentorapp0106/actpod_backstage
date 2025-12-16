@@ -1,5 +1,5 @@
 name: actpod_studio
-description: "A new Flutter project."
+description: "Actpod Studio -「輕鬆上傳音檔，快速上架故事」"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
