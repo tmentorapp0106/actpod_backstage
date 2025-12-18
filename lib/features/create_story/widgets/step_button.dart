@@ -127,7 +127,7 @@ class StepButton extends ConsumerWidget {
         "enable",
         false,
         0,
-        createState.collaborator!.userId,
+        createState.collaborator?.userId,
         createState.scheduledAt,
       );
 

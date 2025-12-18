@@ -1,6 +1,6 @@
 # actpod_studio
 
-A new Flutter project.
+Actpod Studio -「輕鬆上傳音檔，快速上架故事」
 
 ## Getting Started
 
