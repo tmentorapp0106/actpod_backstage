@@ -10,11 +10,15 @@ bool hasLogin = false;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
-    options: FirebaseOptions(apiKey: "AIzaSyC98t3s2itcyGLZW1CaZhl_HhblEwwOZBk", appId: "1:633262239415:web:6d1f9c6e12de881123e732", messagingSenderId: "633262239415",  projectId: "share-voice-77cc4",authDomain: "backstage.actpodapp.com",
-  
-  storageBucket: "share-voice-77cc4.firebasestorage.app",
-  
-  measurementId: "G-0N5GW9EENZ"),
+    options: FirebaseOptions(
+      apiKey: "AIzaSyC98t3s2itcyGLZW1CaZhl_HhblEwwOZBk", 
+      appId: "1:633262239415:web:6d1f9c6e12de881123e732", 
+      messagingSenderId: "633262239415",  
+      projectId: "share-voice-77cc4",
+      authDomain: "backstage.actpodapp.com",
+      storageBucket: "share-voice-77cc4.firebasestorage.app",
+      measurementId: "G-0N5GW9EENZ"
+    ),
   );
   setUrlStrategy(PathUrlStrategy());
   runApp(const ProviderScope(child: ActPodAdminApp()));
