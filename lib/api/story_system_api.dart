@@ -44,12 +44,18 @@ class StoryApi {
   Future<CreatePackageResponse> createPackage(
     String packageName,
     String packageDescription,
+    String packageImageUrl,
+    String spaceId,
+    String channelId,
     int packagePrice,
     int soloPrice,
   ) async {
     var data = {
       "packageName": packageName,
       "packageDescription": packageDescription,
+      "packageImageUrl": packageImageUrl,
+      "spaceId": spaceId,
+      "channelId": channelId,
       "packagePrice": packagePrice,
       "soloPrice": soloPrice,
     };
@@ -62,8 +68,6 @@ class StoryApi {
   }
 
   Future<CreatePackageStoryResponse> createPackageStory(
-    String spaceId,
-    String channelId,
     String contentUrl,
     String storyName,
     String storyDescription,
@@ -77,8 +81,6 @@ class StoryApi {
   ) async {
     var data = {
       "contentUrl": contentUrl,
-      "spaceId": spaceId,
-      "channelId": channelId,
       "storyName": storyName,
       "storyDescription": storyDescription,
       "storyImageUrls": storyImageUrls,
