@@ -74,6 +74,7 @@ class PackageStoriesStep extends ConsumerWidget {
         else
           ...state.stories.map(
             (story) => Padding(
+              key: ValueKey(story.id),
               padding: const EdgeInsets.only(bottom: 16),
               child: _PackageStoryEditor(story: story),
             ),
@@ -83,14 +84,54 @@ class PackageStoriesStep extends ConsumerWidget {
   }
 }
 
-class _PackageStoryEditor extends ConsumerWidget {
+class _PackageStoryEditor extends ConsumerStatefulWidget {
   final PackageStoryDraft story;
 
   const _PackageStoryEditor({required this.story});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PackageStoryEditor> createState() =>
+      _PackageStoryEditorState();
+}
+
+class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _descriptionController;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.story.title);
+    _descriptionController = TextEditingController(
+      text: widget.story.description,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _PackageStoryEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.story.id != widget.story.id) {
+      _titleController.text = widget.story.title;
+      _descriptionController.text = widget.story.description;
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(packageCreateControllerProvider);
     final ctrl = ref.read(packageCreateControllerProvider.notifier);
+    final story = widget.story;
+    final isPickingAudio = state.pickingAudioStoryId == story.id;
+    final isPickingCover = state.pickingCoverStoryId == story.id;
+    final canPickAudio = state.pickingAudioStoryId == null;
+    final canPickCover = state.pickingCoverStoryId == null;
 
     return AppCard(
       child: Padding(
@@ -118,7 +159,7 @@ class _PackageStoryEditor extends ConsumerWidget {
             ),
             const SizedBox(height: 14),
             TextFormField(
-              initialValue: story.title,
+              controller: _titleController,
               onChanged: (value) => ctrl.setStoryTitle(story.id, value),
               decoration: const InputDecoration(
                 labelText: '故事標題',
@@ -128,7 +169,7 @@ class _PackageStoryEditor extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             TextFormField(
-              initialValue: story.description,
+              controller: _descriptionController,
               onChanged: (value) => ctrl.setStoryDescription(story.id, value),
               maxLines: 4,
               maxLength: 800,
@@ -145,10 +186,13 @@ class _PackageStoryEditor extends ConsumerWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 OutlinedButton.icon(
-                  onPressed: () => ctrl.pickStoryAudio(story.id),
+                  onPressed: canPickAudio
+                      ? () => ctrl.pickStoryAudio(story.id)
+                      : null,
                   icon: const Icon(Icons.audio_file_rounded),
                   label: Text(story.audio == null ? '上傳音檔' : '更換音檔'),
                 ),
+                if (isPickingAudio) const _InlineLoading(),
                 if (story.audio != null)
                   _InfoChip(
                     icon: Icons.check_circle_rounded,
@@ -156,10 +200,13 @@ class _PackageStoryEditor extends ConsumerWidget {
                         '${story.audio!.fileName} ・ ${_fmtDuration(story.audio!.duration)}',
                   ),
                 OutlinedButton.icon(
-                  onPressed: () => ctrl.pickStoryCover(story.id),
+                  onPressed: canPickCover
+                      ? () => ctrl.pickStoryCover(story.id)
+                      : null,
                   icon: const Icon(Icons.image_rounded),
                   label: Text(story.imageFilesBytes.isEmpty ? '上傳封面' : '更換封面'),
                 ),
+                if (isPickingCover) const _InlineLoading(),
                 if (story.imageFilesBytes.isNotEmpty)
                   _InfoChip(
                     icon: Icons.check_circle_rounded,
@@ -191,6 +238,19 @@ class _PackageStoryEditor extends ConsumerWidget {
     final mm = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$mm:$ss';
+  }
+}
+
+class _InlineLoading extends StatelessWidget {
+  const _InlineLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 18,
+      height: 18,
+      child: CircularProgressIndicator(strokeWidth: 2),
+    );
   }
 }
 

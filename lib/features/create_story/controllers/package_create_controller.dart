@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
+const _unset = Object();
+
 @immutable
 class PackageStoryDraft {
   final String id;
@@ -63,6 +65,8 @@ class PackageCreateState {
   final String? selectedChannel;
   final List<PackageStoryDraft> stories;
   final bool uploadingAudio;
+  final String? pickingAudioStoryId;
+  final String? pickingCoverStoryId;
   final PublishMode publishMode;
   final DateTime? scheduledAt;
   final String? error;
@@ -78,6 +82,8 @@ class PackageCreateState {
     this.selectedChannel,
     this.stories = const [],
     this.uploadingAudio = false,
+    this.pickingAudioStoryId,
+    this.pickingCoverStoryId,
     this.publishMode = PublishMode.now,
     this.scheduledAt,
     this.error,
@@ -112,6 +118,8 @@ class PackageCreateState {
     String? selectedChannel,
     List<PackageStoryDraft>? stories,
     bool? uploadingAudio,
+    Object? pickingAudioStoryId = _unset,
+    Object? pickingCoverStoryId = _unset,
     PublishMode? publishMode,
     DateTime? scheduledAt,
     String? error,
@@ -128,6 +136,12 @@ class PackageCreateState {
       selectedChannel: selectedChannel ?? this.selectedChannel,
       stories: stories ?? this.stories,
       uploadingAudio: uploadingAudio ?? this.uploadingAudio,
+      pickingAudioStoryId: pickingAudioStoryId == _unset
+          ? this.pickingAudioStoryId
+          : pickingAudioStoryId as String?,
+      pickingCoverStoryId: pickingCoverStoryId == _unset
+          ? this.pickingCoverStoryId
+          : pickingCoverStoryId as String?,
       publishMode: publishMode ?? this.publishMode,
       scheduledAt: scheduledAt ?? this.scheduledAt,
       error: error,
@@ -187,14 +201,20 @@ class PackageCreateController extends Notifier<PackageCreateState> {
   }
 
   Future<void> pickStoryAudio(String storyId) async {
-    state = state.copyWith(uploadingAudio: true);
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
-      type: FileType.custom,
-      allowedExtensions: const ['mp3'],
-      withData: true,
-    );
-    state = state.copyWith(uploadingAudio: false);
+    if (state.pickingAudioStoryId != null) return;
+
+    state = state.copyWith(uploadingAudio: true, pickingAudioStoryId: storyId);
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+        type: FileType.custom,
+        allowedExtensions: const ['mp3'],
+        withData: true,
+      );
+    } finally {
+      state = state.copyWith(uploadingAudio: false, pickingAudioStoryId: null);
+    }
     if (result == null || result.files.isEmpty) return;
 
     final file = result.files.first;
@@ -212,11 +232,19 @@ class PackageCreateController extends Notifier<PackageCreateState> {
   }
 
   Future<void> pickStoryCover(String storyId) async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      withData: true,
-      allowMultiple: true,
-    );
+    if (state.pickingCoverStoryId != null) return;
+
+    state = state.copyWith(pickingCoverStoryId: storyId);
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+        allowMultiple: true,
+      );
+    } finally {
+      state = state.copyWith(pickingCoverStoryId: null);
+    }
     if (result == null || result.files.isEmpty) return;
 
     final paths = <String>[];

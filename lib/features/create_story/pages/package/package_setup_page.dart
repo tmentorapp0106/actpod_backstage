@@ -4,11 +4,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PackageSetupStep extends ConsumerWidget {
+class PackageSetupStep extends ConsumerStatefulWidget {
   const PackageSetupStep({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PackageSetupStep> createState() => _PackageSetupStepState();
+}
+
+class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+
+  @override
+  void initState() {
+    super.initState();
+    final state = ref.read(packageCreateControllerProvider);
+    _nameController = TextEditingController(text: state.packageName ?? '');
+    _descriptionController = TextEditingController(
+      text: state.packageDescription ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(packageCreateControllerProvider);
     final ctrl = ref.read(packageCreateControllerProvider.notifier);
 
@@ -24,7 +49,7 @@ class PackageSetupStep extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
             TextFormField(
-              initialValue: state.packageName ?? '',
+              controller: _nameController,
               onChanged: ctrl.setPackageName,
               decoration: const InputDecoration(
                 labelText: '套裝名稱',
@@ -34,7 +59,7 @@ class PackageSetupStep extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              initialValue: state.packageDescription ?? '',
+              controller: _descriptionController,
               onChanged: ctrl.setPackageDescription,
               maxLines: 5,
               maxLength: 800,
@@ -165,7 +190,7 @@ class _ChannelField extends StatelessWidget {
   }
 }
 
-class _PriceField extends StatelessWidget {
+class _PriceField extends StatefulWidget {
   final String label;
   final int value;
   final ValueChanged<int> onChanged;
@@ -177,14 +202,33 @@ class _PriceField extends StatelessWidget {
   });
 
   @override
+  State<_PriceField> createState() => _PriceFieldState();
+}
+
+class _PriceFieldState extends State<_PriceField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value.toString());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return TextFormField(
-      initialValue: value.toString(),
+      controller: _controller,
       keyboardType: TextInputType.number,
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      onChanged: (v) => onChanged(int.tryParse(v) ?? 0),
+      onChanged: (v) => widget.onChanged(int.tryParse(v) ?? 0),
       decoration: InputDecoration(
-        labelText: '$label (Podcoin)',
+        labelText: '${widget.label} (Podcoin)',
         border: const OutlineInputBorder(),
         isDense: true,
       ),
