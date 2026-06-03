@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:actpod_studio/api/api.dart';
+import 'package:actpod_studio/api/response/upload_response/upload_package_image.dart';
 import 'package:actpod_studio/api/response/upload_response/upload_story_content.dart';
 import 'package:actpod_studio/api/response/upload_response/upload_story_image.dart';
 import 'package:http/http.dart' as http;
@@ -94,6 +95,30 @@ class UploadApi {
       throw Exception('Upload failed: ${response.statusCode}');
     }
     return uploadStoryImageResponse;
+  }
+
+  Future<UploadPackageImageResponse> uploadPackageImage(
+    String filename,
+    Uint8List bytes,
+  ) async {
+    final getUrlResponse = await DioClient.handelPostWithToken(
+      "/file/package/image",
+      {},
+    );
+    final uploadPackageImageResponse = UploadPackageImageResponse.fromResponse(
+      getUrlResponse,
+    );
+
+    final response = await http.put(
+      Uri.parse(uploadPackageImageResponse.signedUrl),
+      headers: {'Content-Type': 'application/octet-stream'},
+      body: bytes,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Upload failed: ${response.statusCode}');
+    }
+    return uploadPackageImageResponse;
   }
 }
 

@@ -1,7 +1,6 @@
 import 'package:actpod_studio/features/create_story/controllers/package_create_controller.dart';
 import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PackageSetupStep extends ConsumerStatefulWidget {
@@ -70,6 +69,8 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
               ),
             ),
             const SizedBox(height: 16),
+            _PackageImagePicker(state: state, ctrl: ctrl),
+            const SizedBox(height: 16),
             LayoutBuilder(
               builder: (context, constraints) {
                 final spaceField = _SpaceField(state: state, ctrl: ctrl);
@@ -130,6 +131,64 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PackageImagePicker extends StatelessWidget {
+  final PackageCreateState state;
+  final PackageCreateController ctrl;
+
+  const _PackageImagePicker({required this.state, required this.ctrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '套裝封面',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            OutlinedButton.icon(
+              onPressed: state.pickingPackageImage
+                  ? null
+                  : ctrl.pickPackageImage,
+              icon: const Icon(Icons.image_rounded),
+              label: Text(state.packageImageBytes == null ? '上傳封面' : '更換封面'),
+            ),
+            if (state.pickingPackageImage)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            if (state.packageImagePath != null)
+              Chip(
+                avatar: const Icon(Icons.check_circle_rounded, size: 18),
+                label: Text(state.packageImagePath!),
+              ),
+          ],
+        ),
+        if (state.packageImageBytes != null) ...[
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.memory(
+              state.packageImageBytes!,
+              width: 120,
+              height: 120,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -225,8 +284,10 @@ class _PriceFieldState extends State<_PriceField> {
     return TextFormField(
       controller: _controller,
       keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      onChanged: (v) => widget.onChanged(int.tryParse(v) ?? 0),
+      onChanged: (v) {
+        final digits = v.replaceAll(RegExp(r'[^0-9]'), '');
+        widget.onChanged(int.tryParse(digits) ?? 0);
+      },
       decoration: InputDecoration(
         labelText: '${widget.label} (Podcoin)',
         border: const OutlineInputBorder(),

@@ -56,6 +56,8 @@ class PackageStoryDraft {
 class PackageCreateState {
   final String? packageName;
   final String? packageDescription;
+  final String? packageImagePath;
+  final Uint8List? packageImageBytes;
   final int packagePricePodcoin;
   final int packageSoloPricePodcoin;
   final List<Space> spaces;
@@ -64,6 +66,7 @@ class PackageCreateState {
   final String? selectedChannel;
   final List<PackageStoryDraft> stories;
   final bool uploadingAudio;
+  final bool pickingPackageImage;
   final String? pickingAudioStoryId;
   final String? pickingCoverStoryId;
   final PublishMode publishMode;
@@ -73,6 +76,8 @@ class PackageCreateState {
   const PackageCreateState({
     this.packageName,
     this.packageDescription,
+    this.packageImagePath,
+    this.packageImageBytes,
     this.packagePricePodcoin = 0,
     this.packageSoloPricePodcoin = 0,
     this.spaces = const [],
@@ -81,6 +86,7 @@ class PackageCreateState {
     this.selectedChannel,
     this.stories = const [],
     this.uploadingAudio = false,
+    this.pickingPackageImage = false,
     this.pickingAudioStoryId,
     this.pickingCoverStoryId,
     this.publishMode = PublishMode.now,
@@ -91,6 +97,7 @@ class PackageCreateState {
   bool get hasValidPackageInfo {
     return (packageName != null && packageName!.trim().isNotEmpty) &&
         (packageDescription != null && packageDescription!.trim().isNotEmpty) &&
+        packageImageBytes != null &&
         (selectedSpace != null && selectedSpace!.isNotEmpty) &&
         (selectedChannel != null && selectedChannel!.isNotEmpty) &&
         packagePricePodcoin >= 0 &&
@@ -109,6 +116,8 @@ class PackageCreateState {
   PackageCreateState copyWith({
     String? packageName,
     String? packageDescription,
+    Object? packageImagePath = _unset,
+    Object? packageImageBytes = _unset,
     int? packagePricePodcoin,
     int? packageSoloPricePodcoin,
     List<Space>? spaces,
@@ -117,6 +126,7 @@ class PackageCreateState {
     String? selectedChannel,
     List<PackageStoryDraft>? stories,
     bool? uploadingAudio,
+    bool? pickingPackageImage,
     Object? pickingAudioStoryId = _unset,
     Object? pickingCoverStoryId = _unset,
     PublishMode? publishMode,
@@ -126,6 +136,12 @@ class PackageCreateState {
     return PackageCreateState(
       packageName: packageName ?? this.packageName,
       packageDescription: packageDescription ?? this.packageDescription,
+      packageImagePath: packageImagePath == _unset
+          ? this.packageImagePath
+          : packageImagePath as String?,
+      packageImageBytes: packageImageBytes == _unset
+          ? this.packageImageBytes
+          : packageImageBytes as Uint8List?,
       packagePricePodcoin: packagePricePodcoin ?? this.packagePricePodcoin,
       packageSoloPricePodcoin:
           packageSoloPricePodcoin ?? this.packageSoloPricePodcoin,
@@ -135,6 +151,7 @@ class PackageCreateState {
       selectedChannel: selectedChannel ?? this.selectedChannel,
       stories: stories ?? this.stories,
       uploadingAudio: uploadingAudio ?? this.uploadingAudio,
+      pickingPackageImage: pickingPackageImage ?? this.pickingPackageImage,
       pickingAudioStoryId: pickingAudioStoryId == _unset
           ? this.pickingAudioStoryId
           : pickingAudioStoryId as String?,
@@ -175,6 +192,30 @@ class PackageCreateController extends Notifier<PackageCreateState> {
       state = state.copyWith(packageSoloPricePodcoin: podcoin);
   void setSpace(String? v) => state = state.copyWith(selectedSpace: v);
   void setChannel(String? v) => state = state.copyWith(selectedChannel: v);
+
+  Future<void> pickPackageImage() async {
+    if (state.pickingPackageImage) return;
+
+    state = state.copyWith(pickingPackageImage: true);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+        allowMultiple: false,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+      if (file.bytes == null) return;
+
+      state = state.copyWith(
+        packageImagePath: file.name,
+        packageImageBytes: file.bytes,
+      );
+    } finally {
+      state = state.copyWith(pickingPackageImage: false);
+    }
+  }
 
   void addStory() {
     state = state.copyWith(

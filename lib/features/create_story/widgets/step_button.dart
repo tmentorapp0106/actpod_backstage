@@ -145,6 +145,10 @@ class StepButton extends ConsumerWidget {
   Future<void> _submitPackage(PackageCreateState state) async {
     final ids = _selectedPackageIds(state);
     final uploadedStories = <_UploadedPackageStory>[];
+    final packageImageResponse = await UploadApi().uploadStoryImage(
+      state.packageImagePath!,
+      state.packageImageBytes!,
+    );
 
     for (final story in state.stories) {
       uploadedStories.add(await _uploadPackageStoryAssets(story));
@@ -153,9 +157,7 @@ class StepButton extends ConsumerWidget {
     final packageResponse = await StoryApi().createPackage(
       state.packageName!,
       state.packageDescription!,
-      uploadedStories.first.imageUrls.isNotEmpty
-          ? uploadedStories.first.imageUrls.first
-          : '',
+      packageImageResponse.publicUrl,
       ids.spaceId,
       ids.channelId,
       state.packagePricePodcoin,
