@@ -1,9 +1,5 @@
-import 'dart:io';
-
 import 'package:actpod_studio/app/theme/theme.dart';
-import 'package:actpod_studio/api/api.dart';
-import 'package:actpod_studio/api/upload_system_api.dart';
-import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
 import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,8 +10,8 @@ class UploadStep extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(createControllerProvider);
-    final ctrl = ref.read(createControllerProvider.notifier);
+    final state = ref.watch(singleCreateControllerProvider);
+    final ctrl = ref.read(singleCreateControllerProvider.notifier);
 
     return AppCard(
       child: Padding(
@@ -31,7 +27,7 @@ class UploadStep extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            if(state.uploadingAudio)
+            if (state.uploadingAudio)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

@@ -5,15 +5,21 @@ class Space {
   String imageUrl;
   int storyCount;
 
-  Space(this.spaceId, this.name, this.description, this.imageUrl, this.storyCount);
+  Space(
+    this.spaceId,
+    this.name,
+    this.description,
+    this.imageUrl,
+    this.storyCount,
+  );
 
   factory Space.fromJson(Map<String, dynamic> json) {
     return Space(
-        json["spaceId"],
-        json["name"],
-        json["description"],
-        json["imageUrl"],
-        json["storyCount"]
+      json["spaceId"],
+      json["name"],
+      json["description"],
+      json["imageUrl"],
+      json["storyCount"],
     );
   }
 
@@ -22,6 +28,6 @@ class Space {
     'name': name,
     'description': description,
     'imageUrl': imageUrl,
-    "storyCount": storyCount
+    "storyCount": storyCount,
   };
 }

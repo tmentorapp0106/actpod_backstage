@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
 import 'package:actpod_studio/features/create_story/models/channel_model.dart';
 import 'package:actpod_studio/features/create_story/models/space_model.dart';
 import 'package:actpod_studio/widgets/app_card.dart';
@@ -12,17 +12,16 @@ class DetailStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final state = ref.watch(createControllerProvider); // 讀取狀態
-    final ctrl = ref.read(createControllerProvider.notifier); // 呼叫方法
+    final state = ref.watch(singleCreateControllerProvider); // 讀取狀態
 
     // 這些欄位名稱請對應你的 CreateState
-    final String title = ctrl.state.title ?? '';
-    final String description = ctrl.state.description ?? '';
-    final List<Space> spaces = ctrl.state.spaces ?? const [];
-    final String? selectedSpace = ctrl.state.selectedSpace;
-    final List<Channel> channels = ctrl.state.channels ?? const [];
-    final String? selectedChannel = ctrl.state.selectedChannel;
-    final List<Uint8List>? coversBytes = ctrl.state.imageFilesBytes;
+    final String title = state.title ?? '';
+    final String description = state.description ?? '';
+    final List<Space> spaces = state.spaces;
+    final String? selectedSpace = state.selectedSpace;
+    final List<Channel> channels = state.channels;
+    final String? selectedChannel = state.selectedChannel;
+    final List<Uint8List>? coversBytes = state.imageFilesBytes;
 
     return AppCard(
       child: Padding(
@@ -42,7 +41,7 @@ class DetailStep extends ConsumerWidget {
             TextFormField(
               initialValue: title,
               onChanged: (v) =>
-                  ref.read(createControllerProvider.notifier).setTitle(v),
+                  ref.read(singleCreateControllerProvider.notifier).setTitle(v),
               decoration: const InputDecoration(
                 hintText: 'EP 1 | title',
                 border: OutlineInputBorder(),
@@ -56,8 +55,9 @@ class DetailStep extends ConsumerWidget {
             const SizedBox(height: 6),
             TextFormField(
               initialValue: description,
-              onChanged: (v) =>
-                  ref.read(createControllerProvider.notifier).setDescription(v),
+              onChanged: (v) => ref
+                  .read(singleCreateControllerProvider.notifier)
+                  .setDescription(v),
               decoration: const InputDecoration(
                 hintText: '輸入敘述（800 字以內）',
                 border: OutlineInputBorder(),
@@ -82,7 +82,7 @@ class DetailStep extends ConsumerWidget {
                   )
                   .toList(),
               onChanged: (v) =>
-                  ref.read(createControllerProvider.notifier).setSpace(v),
+                  ref.read(singleCreateControllerProvider.notifier).setSpace(v),
               decoration: const InputDecoration(
                 hintText: 'Select Your Space',
                 border: OutlineInputBorder(),
@@ -104,8 +104,9 @@ class DetailStep extends ConsumerWidget {
                     ),
                   )
                   .toList(),
-              onChanged: (v) =>
-                  ref.read(createControllerProvider.notifier).setChannel(v),
+              onChanged: (v) => ref
+                  .read(singleCreateControllerProvider.notifier)
+                  .setChannel(v),
               decoration: const InputDecoration(
                 hintText: "Select Your channel",
                 border: OutlineInputBorder(),
@@ -122,8 +123,9 @@ class DetailStep extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 FilledButton.icon(
-                  onPressed: () =>
-                      ref.read(createControllerProvider.notifier).pickCover(),
+                  onPressed: () => ref
+                      .read(singleCreateControllerProvider.notifier)
+                      .pickCover(),
                   icon: const Icon(Icons.upload_rounded),
                   label: const Text('上傳圖片'),
                 ),
@@ -141,7 +143,7 @@ class DetailStep extends ConsumerWidget {
               height: 130,
               child: ReorderableListView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount: coversBytes?.length?? 0,
+                itemCount: coversBytes?.length ?? 0,
                 itemBuilder: (context, index) {
                   return _CoverPicker(
                     key: ValueKey("cover-$index"),
@@ -150,16 +152,17 @@ class DetailStep extends ConsumerWidget {
                     onRemove: coversBytes == null
                         ? null
                         : () => ref
-                              .read(createControllerProvider.notifier)
+                              .read(singleCreateControllerProvider.notifier)
                               .clearCover(),
                   );
-                }, 
-                onReorder: (int oldIndex, int newIndex) { 
-                  ref.read(createControllerProvider.notifier).reorderCovers(oldIndex, newIndex);
-                }, 
-              )
+                },
+                onReorder: (int oldIndex, int newIndex) {
+                  ref
+                      .read(singleCreateControllerProvider.notifier)
+                      .reorderCovers(oldIndex, newIndex);
+                },
+              ),
             ),
-            
 
             const SizedBox(height: 24),
 
@@ -167,12 +170,12 @@ class DetailStep extends ConsumerWidget {
             // Row(
             //   children: [
             //     OutlinedButton(
-            //       onPressed: () => ref.read(createControllerProvider.notifier).back(),
+            //       onPressed: () => ref.read(singleCreateControllerProvider.notifier).back(),
             //       child: const Text('上一步'),
             //     ),
             //     const Spacer(),
             //     FilledButton(
-            //       onPressed: () => ref.read(createControllerProvider.notifier).next(),
+            //       onPressed: () => ref.read(singleCreateControllerProvider.notifier).next(),
             //       child: const Text('下一步'),
             //     ),
             //   ],
@@ -221,8 +224,8 @@ class _CoverPicker extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(width: 8,)
-      ]
+        SizedBox(width: 8),
+      ],
     );
   }
 }

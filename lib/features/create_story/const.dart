@@ -1,4 +1,1 @@
-// enum PublishStep { upload, detail, highlight, settings, preview }
-enum PublishStep { upload, detail,  settings, preview }
-
-// enum PublishStep { upload, detail, preview }
+enum PublishStep { type, package, upload, detail, settings, preview }

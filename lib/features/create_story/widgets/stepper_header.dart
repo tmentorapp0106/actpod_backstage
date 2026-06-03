@@ -11,11 +11,7 @@ class StepperHeader extends StatelessWidget {
     return Row(
       children: [
         for (int i = 0; i < titles.length; i++) ...[
-          _DotLabel(
-            label: titles[i],
-            active: i == active,
-            done: i < active,
-          ),
+          _DotLabel(label: titles[i], active: i == active, done: i < active),
           if (i < titles.length - 1)
             Expanded(child: Divider(thickness: 2, indent: 8, endIndent: 8)),
         ],
@@ -27,7 +23,11 @@ class StepperHeader extends StatelessWidget {
 class _DotLabel extends StatelessWidget {
   final String label;
   final bool active, done;
-  const _DotLabel({required this.label, required this.active, required this.done});
+  const _DotLabel({
+    required this.label,
+    required this.active,
+    required this.done,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +37,12 @@ class _DotLabel extends StatelessWidget {
       children: [
         CircleAvatar(radius: 10, backgroundColor: done ? Colors.green : color),
         const SizedBox(width: 6),
-        Text(label, style: TextStyle(color: active ? Color(0xFFFFBC1F) : Colors.grey[600])),
+        Text(
+          label,
+          style: TextStyle(
+            color: active ? Color(0xFFFFBC1F) : Colors.grey[600],
+          ),
+        ),
       ],
     );
   }

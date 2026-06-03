@@ -1,5 +1,6 @@
 import 'package:actpod_studio/app/theme/theme.dart';
-import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/create_shared_models.dart';
+import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
 import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:actpod_studio/widgets/avatar.dart';
 import 'package:flutter/cupertino.dart';
@@ -10,13 +11,15 @@ import 'package:interval_time_picker/models/visible_step.dart';
 import 'package:time_picker_spinner_pop_up/time_picker_spinner_pop_up.dart';
 
 class SettingsStep extends ConsumerWidget {
-  const SettingsStep({super.key});
+  final bool showPrice;
+
+  const SettingsStep({super.key, this.showPrice = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final state = ref.watch(createControllerProvider); // 狀態
-    final ctrl = ref.read(createControllerProvider.notifier); // 方法
+    final state = ref.watch(singleCreateControllerProvider); // 狀態
+    final ctrl = ref.read(singleCreateControllerProvider.notifier); // 方法
 
     Future<void> pickSchedule() async {
       final now = DateTime.now();
@@ -42,15 +45,12 @@ class SettingsStep extends ConsumerWidget {
       } else {
         timeMinute = time.minute;
       }
-
-      if (time == null) return;
       ctrl.setScheduledAt(
         DateTime(date.year, date.month, date.day, time!.hour, timeMinute),
       );
     }
 
     Future<void> addCollaborator() async {
-       print(state.collaborator);
       final controller = TextEditingController();
       final ok = await showDialog<bool>(
         context: context,
@@ -58,8 +58,10 @@ class SettingsStep extends ConsumerWidget {
           builder: (context, ref, _) {
             final _scrollController = ScrollController();
 
-            final state = ref.watch(createControllerProvider); // 狀態
-            final ctrl = ref.read(createControllerProvider.notifier); // 方法
+            final state = ref.watch(singleCreateControllerProvider); // 狀態
+            final ctrl = ref.read(
+              singleCreateControllerProvider.notifier,
+            ); // 方法
 
             return AlertDialog(
               title: const Text('新增合作創作者'),
@@ -74,7 +76,6 @@ class SettingsStep extends ConsumerWidget {
                       autofocus: true,
                       onChanged: (_) {
                         ctrl.searchUserList(controller.text);
-                        // print(state.searchUserList);
                       },
                     ),
                     SizedBox(height: 12),
@@ -133,34 +134,35 @@ class SettingsStep extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            // // 金額 (Podcoin)
-            // const _SectionTitle('金額 (Podcoin)'),
-            // const SizedBox(height: 8),
-            // DropdownButtonFormField<int>(
-            //   value: state.pricePodcoin,
-            //   onChanged: (v) => ctrl.setPrice(v ?? 0),
-            //   items: const [
-            //     DropdownMenuItem(value: 0, child: Text('免費')),
-            //     DropdownMenuItem(value: 10, child: Text('10 Podcoin')),
-            //     DropdownMenuItem(value: 20, child: Text('20 Podcoin')),
-            //     DropdownMenuItem(value: 30, child: Text('30 Podcoin')),
-            //     DropdownMenuItem(value: 50, child: Text('50 Podcoin')),
-            //     DropdownMenuItem(value: 100, child: Text('100 Podcoin')),
-            //     DropdownMenuItem(value: 150, child: Text('150 Podcoin')),
-            //     DropdownMenuItem(value: 200, child: Text('200 Podcoin')),
-            //     DropdownMenuItem(value: 500, child: Text('500 Podcoin')),
-            //   ],
-            //   decoration: InputDecoration(
-            //     contentPadding: const EdgeInsets.symmetric(
-            //       horizontal: 14,
-            //       vertical: 12,
-            //     ),
-            //     border: OutlineInputBorder(
-            //       borderRadius: BorderRadius.circular(12),
-            //     ),
-            //   ),
-            // ),
-            // const SizedBox(height: 28),
+            if (showPrice) ...[
+              const _SectionTitle('金額 (Podcoin)'),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<int>(
+                value: state.pricePodcoin,
+                onChanged: (v) => ctrl.setPrice(v ?? 0),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('免費')),
+                  DropdownMenuItem(value: 10, child: Text('10 Podcoin')),
+                  DropdownMenuItem(value: 20, child: Text('20 Podcoin')),
+                  DropdownMenuItem(value: 30, child: Text('30 Podcoin')),
+                  DropdownMenuItem(value: 50, child: Text('50 Podcoin')),
+                  DropdownMenuItem(value: 100, child: Text('100 Podcoin')),
+                  DropdownMenuItem(value: 150, child: Text('150 Podcoin')),
+                  DropdownMenuItem(value: 200, child: Text('200 Podcoin')),
+                  DropdownMenuItem(value: 500, child: Text('500 Podcoin')),
+                ],
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+            ],
             const _SectionTitle('發布時間'),
             const SizedBox(height: 12),
             Row(
@@ -201,7 +203,9 @@ class SettingsStep extends ConsumerWidget {
                 const _SectionTitle('合作創作者'),
                 const SizedBox(width: 8),
                 Visibility(
-                  visible: state.collaborator == null || state.collaborator?.userId == "",
+                  visible:
+                      state.collaborator == null ||
+                      state.collaborator?.userId == "",
                   child: IconButton(
                     visualDensity: VisualDensity.compact,
                     onPressed: addCollaborator,
@@ -252,7 +256,6 @@ class SettingsStep extends ConsumerWidget {
                     label: Text(state.collaborator?.name ?? ""),
                     onDeleted: () {
                       ctrl.removeCollaborator();
-                      print(state.collaborator);
                     },
                   ),
                 ],

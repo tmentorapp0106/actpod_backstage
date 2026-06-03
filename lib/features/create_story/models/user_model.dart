@@ -20,7 +20,7 @@ class UserInfo {
       email: data['email'] ?? '',
     );
   }
- String toString() {
+  String toString() {
     return 'UserInfo(id: $userId, name: $name, email: $email, avatarUrl: $avatarUrl)';
   }
 
@@ -37,5 +37,4 @@ class UserInfo {
       email: email ?? this.email,
     );
   }
-
 }

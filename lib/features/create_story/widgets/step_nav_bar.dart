@@ -7,8 +7,7 @@ class StepNavBar extends StatelessWidget {
   final bool busy;
   final bool isLast;
   final String? nextLabel;
-final bool disableNext;  // 預設 false
-
+  final bool disableNext; // 預設 false
 
   const StepNavBar({
     super.key,
@@ -37,8 +36,16 @@ final bool disableNext;  // 預設 false
         FilledButton.icon(
           onPressed: busy ? null : onNext,
           icon: busy
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-              : Icon(isLast ? Icons.cloud_upload_rounded : Icons.chevron_right_rounded),
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Icon(
+                  isLast
+                      ? Icons.cloud_upload_rounded
+                      : Icons.chevron_right_rounded,
+                ),
           label: Text(nextLabel ?? (isLast ? '發布' : '下一步')),
         ),
       ],

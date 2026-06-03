@@ -1,19 +1,13 @@
 // login_page.dart
 import 'dart:io' show Platform;
-import 'package:actpod_studio/api/api.dart';
-import 'package:actpod_studio/api/channel_system_api.dart';
-import 'package:actpod_studio/api/space_system_api.dart';
-import 'package:actpod_studio/api/user_system_api.dart';
-import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/package_create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
-import 'package:actpod_studio/features/create_story/models/channel_model.dart';
-import 'package:actpod_studio/features/create_story/models/space_model.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -73,11 +67,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       provider.addScope('email');
       provider.setCustomParameters({'prompt': 'select_account'});
       cred = await FirebaseAuth.instance.signInWithPopup(provider);
-      final googleId = cred.additionalUserInfo?.profile?['id'];
       final googleprofile = cred.additionalUserInfo?.profile;
       final idToken = await cred.user?.getIdToken();
 
-      
       final userCtrl = ref.read(userControllerProvider.notifier);
       await userCtrl.login(
         idToken ?? '',
@@ -87,9 +79,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       await userCtrl.getUserInfo();
 
       final userState = ref.read(userControllerProvider);
-      final ctrl = ref.read(createControllerProvider.notifier);
-      await ctrl.getSpaceList();
-      ctrl.getUserChannels(userState?.userId ?? '');
+      final singleCtrl = ref.read(singleCreateControllerProvider.notifier);
+      final packageCtrl = ref.read(packageCreateControllerProvider.notifier);
+      await singleCtrl.getSpaceList();
+      singleCtrl.getUserChannels(userState?.userId ?? '');
+      await packageCtrl.getSpaceList();
+      packageCtrl.getUserChannels(userState?.userId ?? '');
 
       if (mounted) setState(() => _loading = false);
 

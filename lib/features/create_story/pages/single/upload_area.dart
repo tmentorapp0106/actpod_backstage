@@ -1,6 +1,5 @@
-import 'dart:math' as math;
 import 'package:actpod_studio/app/theme/theme.dart';
-import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -22,14 +21,14 @@ class UploadArea extends ConsumerWidget {
   });
 
   Future<void> _pick(WidgetRef ref) async {
-    ref.read(createControllerProvider.notifier).setLoadingAudio(true);
+    ref.read(singleCreateControllerProvider.notifier).setLoadingAudio(true);
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: false,
       type: FileType.custom,
       allowedExtensions: allowedExtensions,
       withData: kIsWeb, // web 取 bytes
     );
-    ref.read(createControllerProvider.notifier).setLoadingAudio(false);
+    ref.read(singleCreateControllerProvider.notifier).setLoadingAudio(false);
     if (result != null && result.files.isNotEmpty) {
       onChanged(result.files);
     }
@@ -45,7 +44,9 @@ class UploadArea extends ConsumerWidget {
       radius: const Radius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () {_pick(ref);},
+        onTap: () {
+          _pick(ref);
+        },
         child: Container(
           constraints: const BoxConstraints(minHeight: 280),
           width: double.infinity,
@@ -60,17 +61,21 @@ class UploadArea extends ConsumerWidget {
               const Icon(Icons.cloud_upload_rounded, size: 32),
               const SizedBox(height: 10),
               OutlinedButton.icon(
-                onPressed: () {_pick(ref);},
-                icon: Icon(Icons.upload_rounded ,color: context.color.brand),
+                onPressed: () {
+                  _pick(ref);
+                },
+                icon: Icon(Icons.upload_rounded, color: context.color.brand),
                 label: const Text('上傳音檔'),
               ),
               const SizedBox(height: 8),
               Text(hint, style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: 4),
-              Text('支援：${allowedExtensions.join(', ').toUpperCase()}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.black38,
-                      )),
+              Text(
+                '支援：${allowedExtensions.join(', ').toUpperCase()}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.black38),
+              ),
             ],
           ),
         ),
@@ -78,4 +83,3 @@ class UploadArea extends ConsumerWidget {
     );
   }
 }
-

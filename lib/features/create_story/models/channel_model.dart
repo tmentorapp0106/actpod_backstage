@@ -18,7 +18,7 @@ class Channel {
     this.channelName,
     this.channelImageUrl,
     this.storyCount,
-    this.createTime
+    this.createTime,
   );
 
   factory Channel.fromJson(Map<String, dynamic> json) {
@@ -31,7 +31,7 @@ class Channel {
       json["channelName"],
       json["channelImageUrl"],
       json["storyCount"],
-      DateTime.parse(json["createTime"])
+      DateTime.parse(json["createTime"]),
     );
   }
 }

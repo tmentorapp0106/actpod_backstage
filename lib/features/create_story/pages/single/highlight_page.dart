@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'package:actpod_studio/app/theme/theme.dart';
-import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
 import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
-
-
 
 class HighlightStep extends ConsumerStatefulWidget {
   const HighlightStep({super.key});
@@ -17,13 +15,11 @@ class HighlightStep extends ConsumerStatefulWidget {
 }
 
 class _HighlightStepState extends ConsumerState<HighlightStep> {
-  
-
   late final AudioPlayer _player;
   StreamSubscription<Duration>? _posSub;
 
   // 你之後可以把 totalDuration 改成從 controller/state 取得
-  Duration totalDuration = const Duration(minutes: 00, seconds:000);
+  Duration totalDuration = const Duration(minutes: 00, seconds: 000);
 
   // 預設精華長度（秒）
   int _clipLen = 20;
@@ -37,61 +33,52 @@ class _HighlightStepState extends ConsumerState<HighlightStep> {
 
   bool _highlightLocked = false; // false = 還在調整, true = 已選定
 
+  @override
+  void initState() {
+    super.initState();
+    _player = AudioPlayer();
 
+    Future.microtask(() async {
+      final state = ref.read(singleCreateControllerProvider);
+      if (state.audios.isEmpty) return;
 
-@override
-void initState() {
-  super.initState();
-  _player = AudioPlayer();
+      final audio = state.audios.first;
 
-  Future.microtask(() async {
-    final state = ref.read(createControllerProvider);
-    if (state.audios.isEmpty) return;
+      // ✅ 若有 bytes 就優先用 bytes 播（例如 Web 上傳）
+      if (audio.fileBytes.isNotEmpty) {
+        // 用 Data URI 把 bytes 包成一個可以播放的 Uri
+        final uri = Uri.dataFromBytes(
+          audio.fileBytes,
+          mimeType: 'audio/mpeg', // 如果是 m4a / wav 等，記得改成正確的 mimeType
+        );
 
-    final audio = state.audios.first;
+        await _player.setAudioSource(AudioSource.uri(uri));
+      }
+      // ✅ 否則用 path（本機或遠端 URL）
+      else if (audio.path.isNotEmpty) {
+        // 如果是本機檔案
+        await _player.setAudioSource(AudioSource.file(audio.path));
 
-    // ✅ 若有 bytes 就優先用 bytes 播（例如 Web 上傳）
-    if (audio.fileBytes.isNotEmpty) {
-      // 用 Data URI 把 bytes 包成一個可以播放的 Uri
-      final uri = Uri.dataFromBytes(
-        audio.fileBytes,
-        mimeType: 'audio/mpeg', // 如果是 m4a / wav 等，記得改成正確的 mimeType
-      );
+        // 如果未來是純 URL（例如後端給的 mp3 網址），可以改成：
+        // await _player.setAudioSource(AudioSource.uri(Uri.parse(audio.path)));
+      }
 
-      await _player.setAudioSource(
-        AudioSource.uri(uri),
-      );
-    }
-    // ✅ 否則用 path（本機或遠端 URL）
-    else if (audio.path.isNotEmpty) {
-      // 如果是本機檔案
-      await _player.setAudioSource(
-        AudioSource.file(audio.path),
-      );
+      final dur = _player.duration;
+      if (!mounted || dur == null) return;
 
-      // 如果未來是純 URL（例如後端給的 mp3 網址），可以改成：
-      // await _player.setAudioSource(AudioSource.uri(Uri.parse(audio.path)));
-    }
-
-    final dur = _player.duration;
-    if (!mounted || dur == null) return;
-
-    setState(() {
-      totalDuration = dur;
-      _clipLen = _clipLen.clamp(5, dur.inSeconds);
+      setState(() {
+        totalDuration = dur;
+        _clipLen = _clipLen.clamp(5, dur.inSeconds);
+      });
     });
+  }
 
-  });
-}
-
-
-@override
-void dispose() {
-  _posSub?.cancel();
-  _player.dispose();
-  super.dispose();
-}
-
+  @override
+  void dispose() {
+    _posSub?.cancel();
+    _player.dispose();
+    super.dispose();
+  }
 
   // ===== Helpers =====
   String _fmt(Duration d) {
@@ -106,74 +93,73 @@ void dispose() {
     return Duration(seconds: end.clamp(0, maxEnd));
   }
 
-
   void _toggleLock() {
     setState(() {
       _highlightLocked = !_highlightLocked;
     });
   }
 
-void _togglePlay() async {
-  // 目前是「播放中」→ 那就暫停
-  if (_playing) {
-    await _player.pause();
-    setState(() => _playing = false);
-    return;
-  }
-
-  // 精華開始＆結束時間
-  final start = Duration(seconds: _startSec);
-  final end = Duration(seconds: _startSec + _clipLen);
-
-  // 從精華開始秒數播
-  await _player.seek(start);
-  await _player.play();
-
-  setState(() {
-    _playing = true;
-    _previewPos = 0; // 精華內部的 0 秒
-  });
-
-  // 監聽播放進度
-  _posSub?.cancel();
-  _posSub = _player.positionStream.listen((pos) {
-    if (!mounted) return;
-
-    final sec = pos.inSeconds;
-
-    // 超過精華結束 → 自動停 & 回到開頭
-    if (sec >= end.inSeconds) {
-      _player.pause();
-      _player.seek(start);
-      setState(() {
-        _playing = false;
-        _previewPos = 0;
-      });
-    } else {
-      // 更新精華區段內的 slider（0 ~ _clipLen）
-      setState(() {
-        _previewPos =
-            (sec - _startSec).toDouble().clamp(0, _clipLen.toDouble());
-      });
+  void _togglePlay() async {
+    // 目前是「播放中」→ 那就暫停
+    if (_playing) {
+      await _player.pause();
+      setState(() => _playing = false);
+      return;
     }
-  });
-}
 
+    // 精華開始＆結束時間
+    final start = Duration(seconds: _startSec);
+    final end = Duration(seconds: _startSec + _clipLen);
 
+    // 從精華開始秒數播
+    await _player.seek(start);
+    await _player.play();
 
+    setState(() {
+      _playing = true;
+      _previewPos = 0; // 精華內部的 0 秒
+    });
 
+    // 監聽播放進度
+    _posSub?.cancel();
+    _posSub = _player.positionStream.listen((pos) {
+      if (!mounted) return;
+
+      final sec = pos.inSeconds;
+
+      // 超過精華結束 → 自動停 & 回到開頭
+      if (sec >= end.inSeconds) {
+        _player.pause();
+        _player.seek(start);
+        setState(() {
+          _playing = false;
+          _previewPos = 0;
+        });
+      } else {
+        // 更新精華區段內的 slider（0 ~ _clipLen）
+        setState(() {
+          _previewPos = (sec - _startSec).toDouble().clamp(
+            0,
+            _clipLen.toDouble(),
+          );
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(createControllerProvider);
-    final ctrl = ref.read(createControllerProvider.notifier);
+    final state = ref.watch(singleCreateControllerProvider);
+    final ctrl = ref.read(singleCreateControllerProvider.notifier);
 
     final brand = context.color.brand;
 
     final start = Duration(seconds: _startSec);
     final end = _clampedEnd();
-    final remainForStart =
-        (totalDuration.inSeconds - _clipLen).clamp(0, totalDuration.inSeconds);
+    final remainForStart = (totalDuration.inSeconds - _clipLen).clamp(
+      0,
+      totalDuration.inSeconds,
+    );
 
     return AppCard(
       child: Padding(
@@ -181,13 +167,17 @@ void _togglePlay() async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('擷取精華',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const Text(
+              '擷取精華',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 24),
 
             // ===== 精華長度 =====
-            const Text('精華長度',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            const Text(
+              '精華長度',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
               value: _clipLen,
@@ -202,8 +192,8 @@ void _togglePlay() async {
                   _clipLen = v;
                   // 重新校正 start，避免超出
                   ctrl.setHighlightLength(Duration(seconds: v));
-                  final latestStart =
-                      (totalDuration.inSeconds - _clipLen).clamp(0, totalDuration.inSeconds);
+                  final latestStart = (totalDuration.inSeconds - _clipLen)
+                      .clamp(0, totalDuration.inSeconds);
                   if (_startSec > latestStart) {
                     _startSec = latestStart;
                   }
@@ -214,40 +204,33 @@ void _togglePlay() async {
                 });
               },
               decoration: InputDecoration(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
             const SizedBox(height: 20),
 
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
             // ===== 開始時間（分：秒 兩格 + 選取按鈕） =====
-            const Text('輸入精華開始時間',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            const Text(
+              '輸入精華開始時間',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 10),
             MmSsPicker(
               initialSeconds: _startSec,
               maxStartSeconds: remainForStart,
               onPick: (sec) {
                 setState(() {
-                  _startSec = sec;     // 套用選取結果
-                  _previewPos = 0;     // 重置試聽進度
+                  _startSec = sec; // 套用選取結果
+                  _previewPos = 0; // 重置試聽進度
                   _playing = false;
                   // _timer?.cancel();
-                  ctrl.setSelection(
-                    start: Duration(seconds: _startSec),
-                  );
+                  ctrl.setSelection(start: Duration(seconds: _startSec));
                 });
               },
             ),
@@ -267,8 +250,10 @@ void _togglePlay() async {
             const SizedBox(height: 24),
 
             // ===== 試聽播放器（模擬） =====
-            const Text('精華試聽',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            const Text(
+              '精華試聽',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -284,7 +269,8 @@ void _togglePlay() async {
                       min: 0,
                       max: _clipLen.toDouble(),
                       onChanged: (v) async {
-                        final newSec = _startSec + v.floor(); // 精華區段內第 v 秒 → 總時間軸上的秒數
+                        final newSec =
+                            _startSec + v.floor(); // 精華區段內第 v 秒 → 總時間軸上的秒數
                         await _player.seek(Duration(seconds: newSec));
                         setState(() {
                           _previewPos = v;
@@ -313,7 +299,7 @@ void _togglePlay() async {
                   FilledButton.icon(
                     onPressed: _toggleLock,
                     style: FilledButton.styleFrom(
-                      backgroundColor:context.color.border ,
+                      backgroundColor: context.color.border,
                       minimumSize: const Size(80, 36),
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
@@ -321,16 +307,17 @@ void _togglePlay() async {
                       ),
                     ),
                     icon: Icon(
-                      _highlightLocked ? Icons.lock_open_rounded : Icons.lock_outline,
+                      _highlightLocked
+                          ? Icons.lock_open_rounded
+                          : Icons.lock_outline,
                       color: Colors.white,
                     ),
                     label: Text(_highlightLocked ? '選定' : '重選'),
-                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-
           ],
         ),
       ),
@@ -343,11 +330,11 @@ void _togglePlay() async {
 /// - 分 0–99、秒 0–59
 /// - 會把選到的總秒數夾在 [0, maxStartSeconds] 之內
 class MmSsPicker extends StatefulWidget {
-  final int initialSeconds;              // 起始秒數（會自動拆成 mm:ss）
+  final int initialSeconds; // 起始秒數（會自動拆成 mm:ss）
   final void Function(int seconds) onPick; // 按「選取」後回傳總秒數
-  final int? maxStartSeconds;            // 允許的最大起點秒數（可選，超過會夾）
-  final double boxWidth;                 // 輸入框寬
-  final double boxHeight;                // 輸入框高
+  final int? maxStartSeconds; // 允許的最大起點秒數（可選，超過會夾）
+  final double boxWidth; // 輸入框寬
+  final double boxHeight; // 輸入框高
 
   const MmSsPicker({
     super.key,
@@ -383,14 +370,14 @@ class _MmSsPickerState extends State<MmSsPicker> {
   }
 
   InputDecoration _box(BuildContext context) => InputDecoration(
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 10),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Theme.of(context).dividerColor),
-        ),
-      );
+    isDense: true,
+    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: Theme.of(context).dividerColor),
+    ),
+  );
 
   Widget _numBox(TextEditingController c) {
     return SizedBox(
@@ -452,8 +439,9 @@ class _MmSsPickerState extends State<MmSsPicker> {
           style: FilledButton.styleFrom(
             backgroundColor: brand,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
           child: const Text('選取'),
         ),

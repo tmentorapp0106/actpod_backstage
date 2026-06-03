@@ -32,8 +32,8 @@ class StoryApi {
       "previewEndAt": previewEndAt,
       "voiceMessageStatus": voiceMessageStatus,
       "isPremium": isPremium,
-      "price": 0,
-      "collaboratorId": null,
+      "price": price,
+      "collaboratorId": collaboratorId,
       "releaseTime": releaseTime?.toUtc().toIso8601String(),
     };
 
@@ -68,6 +68,7 @@ class StoryApi {
   }
 
   Future<CreatePackageStoryResponse> createPackageStory(
+    String packageId,
     String contentUrl,
     String storyName,
     String storyDescription,
@@ -80,6 +81,7 @@ class StoryApi {
     DateTime? releaseTime,
   ) async {
     var data = {
+      "packageId": packageId,
       "contentUrl": contentUrl,
       "storyName": storyName,
       "storyDescription": storyDescription,
@@ -88,7 +90,7 @@ class StoryApi {
       "previewStartFrom": previewStartFrom,
       "previewEndAt": previewEndAt,
       "voiceMessageStatus": voiceMessageStatus,
-      "collaboratorId": null,
+      "collaboratorId": collaboratorId,
       "releaseTime": releaseTime?.toUtc().toIso8601String(),
     };
 
