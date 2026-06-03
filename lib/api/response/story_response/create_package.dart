@@ -1,24 +1,24 @@
 import 'package:dio/dio.dart';
 
-class UploadStoryResponse {
+class CreatePackageResponse {
   final String code;
   final String message;
-  final String storyId;
+  final String packageId;
 
-  const UploadStoryResponse({
+  const CreatePackageResponse({
     required this.code,
     required this.message,
-    required this.storyId,
+    required this.packageId,
   });
 
-  factory UploadStoryResponse.fromResponse(Response response) {
+  factory CreatePackageResponse.fromResponse(Response response) {
     final body = response.data;
     final json = body is Map<String, dynamic> ? body : <String, dynamic>{};
 
-    return UploadStoryResponse(
+    return CreatePackageResponse(
       code: json['code'] is String ? json['code'] as String : '',
       message: json['message'] is String ? json['message'] as String : '',
-      storyId: json['data'] is String ? json['data'] as String : '',
+      packageId: json['data'] is String ? json['data'] as String : '',
     );
   }
 }
