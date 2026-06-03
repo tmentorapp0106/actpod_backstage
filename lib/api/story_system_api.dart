@@ -1,8 +1,8 @@
-import 'package:actpod_studio/features/api/api.dart';
-import 'package:dio/dio.dart';
+import 'package:actpod_studio/api/api.dart';
+import 'package:actpod_studio/api/response/story_response/upload_story.dart';
 
 class StoryApi {
-  Future<String> uploadStory(
+  Future<UploadStoryResponse> uploadStory(
     String spaceId,
     String channelId,
     String contentUrl,
@@ -33,15 +33,14 @@ class StoryApi {
       "voiceMessageStatus": voiceMessageStatus,
       "isPremium": isPremium,
       "price": 0,
-      "collaboratorId":null,
+      "collaboratorId": null,
       "releaseTime": releaseTime?.toUtc().toIso8601String(),
     };
 
-    Response response = await DioClient.handelPostWithToken("/story/", data);
-    return response.data.toString();
+    final response = await DioClient.handelPostWithToken("/story/", data);
+    return UploadStoryResponse.fromResponse(response);
   }
 }
-
 
 class BlockInfoDto {
   Duration from;
@@ -57,8 +56,8 @@ class BlockInfoDto {
   String type; // sound, story
   String soundType; // soundEffect, music
 
-  BlockInfoDto(
-  {required this.from,
+  BlockInfoDto({
+    required this.from,
     required this.to,
     required this.position,
     required this.soundIndex,
@@ -82,7 +81,9 @@ class BlockInfoDto {
       volume: (json['volume'] as num).toDouble(), // Ensures it's a double
       url: json['url'],
       name: json['name'],
-      waveformData: (json['waveformData'] as List<dynamic>).map((e) => (e as num).toDouble()).toList(),
+      waveformData: (json['waveformData'] as List<dynamic>)
+          .map((e) => (e as num).toDouble())
+          .toList(),
       skip: Duration(milliseconds: json['skipMilliSec']),
       type: json['type'],
       soundType: json['soundType'],
@@ -102,7 +103,7 @@ class BlockInfoDto {
       'volume': volume,
       'url': url,
       'type': type,
-      'soundType': soundType
+      'soundType': soundType,
     };
   }
 

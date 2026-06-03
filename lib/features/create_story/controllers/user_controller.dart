@@ -1,11 +1,7 @@
-import 'package:actpod_studio/features/api/api.dart';
-import 'package:actpod_studio/features/api/channel_system_api.dart';
-import 'package:actpod_studio/features/api/user_system_api.dart';
-import 'package:actpod_studio/features/create_story/models/channel_model.dart';
+import 'package:actpod_studio/api/user_system_api.dart';
 import 'package:actpod_studio/features/create_story/models/user_model.dart';
 import 'package:actpod_studio/main.dart';
 import 'package:actpod_studio/utils/cookies_util.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class UserController extends Notifier<UserInfo?> {
@@ -19,23 +15,20 @@ class UserController extends Notifier<UserInfo?> {
     String? email,
     String displayname,
   ) async {
-    final Response = await UserApi().thirdPartyCreateUserOrLogin(
+    final response = await UserApi().thirdPartyCreateUserOrLogin(
       thirdPartyUserToker,
       email,
-      displayname ?? "",
+      displayname,
     );
-    String userToken = Response.data['data']['userToken'] ?? '';
-    CookieUtils.setCookie("userToken", userToken);
+    CookieUtils.setCookie("userToken", response.userToken);
     hasLogin = true;
   }
 
   Future<void> getUserInfo() async {
     UserApi api = UserApi();
     final response = await api.getUserInfo();
-    final userInfo = UserInfo.fromJson(response);
-    state = userInfo;
+    state = response.userInfo;
   }
-
 
   void clear() {
     state = null;

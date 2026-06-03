@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:actpod_studio/app/theme/theme.dart';
-import 'package:actpod_studio/features/api/api.dart';
-import 'package:actpod_studio/features/api/upload_system_api.dart';
+import 'package:actpod_studio/api/api.dart';
+import 'package:actpod_studio/api/upload_system_api.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
 import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';

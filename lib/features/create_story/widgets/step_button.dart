@@ -1,9 +1,7 @@
-import 'package:actpod_studio/features/api/api.dart';
-import 'package:actpod_studio/features/api/story_system_api.dart';
-import 'package:actpod_studio/features/api/upload_system_api.dart';
+import 'package:actpod_studio/api/story_system_api.dart';
+import 'package:actpod_studio/api/upload_system_api.dart';
 import 'package:actpod_studio/features/create_story/const.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_controller.dart';
-import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
 import 'package:actpod_studio/features/create_story/widgets/step_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,7 +51,6 @@ class StepButton extends ConsumerWidget {
             if (!canNext) return; // 防呆
             ctrl.next();
             context.go('/publish/${state.currentPage + 1}');
-           
           } else {
             _submit(context, ref); // 內部會 setSaving(true/false)
           }
@@ -78,15 +75,21 @@ class StepButton extends ConsumerWidget {
 
       CreateState createState = ref.watch(createControllerProvider);
       // print(createState.audios[0].duration.inMicroseconds);
-      String contentUrl = await UploadApi().uploadStoryContent(
+      final contentResponse = await UploadApi().uploadStoryContent(
         createState.audios[0].fileName,
         createState.audios[0].fileBytes,
       );
       final uploadImageFutures = List.generate(
-        createState.imageFilePaths?.length?? 0,
-        (i) => UploadApi().uploadStoryImage(createState.imageFilePaths![i], createState.imageFilesBytes![i]),
+        createState.imageFilePaths?.length ?? 0,
+        (i) => UploadApi().uploadStoryImage(
+          createState.imageFilePaths![i],
+          createState.imageFilesBytes![i],
+        ),
       );
-      final List<String> imageUrls = await Future.wait(uploadImageFutures);
+      final imageResponses = await Future.wait(uploadImageFutures);
+      final imageUrls = imageResponses
+          .map((response) => response.publicUrl)
+          .toList();
 
       final spaceId = createState.spaces
           .where((space) => space.name == createState.selectedSpace)
@@ -101,7 +104,7 @@ class StepButton extends ConsumerWidget {
       await StoryApi().uploadStory(
         spaceId,
         channelId,
-        contentUrl,
+        contentResponse.publicUrl,
         createState.title!,
         createState.description!,
         imageUrls,
@@ -134,7 +137,6 @@ class StepButton extends ConsumerWidget {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('已提交發布')));
-
     } catch (e, st) {
       debugPrint('發布失敗：$e');
       debugPrint(st.toString()); // ✅ 會印出是哪一行

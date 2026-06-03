@@ -1,9 +1,8 @@
 // lib/features/create_story/controllers/create_controller.dart
 import 'dart:typed_data';
-import 'package:actpod_studio/features/api/api.dart';
-import 'package:actpod_studio/features/api/channel_system_api.dart';
-import 'package:actpod_studio/features/api/space_system_api.dart';
-import 'package:actpod_studio/features/api/user_system_api.dart';
+import 'package:actpod_studio/api/channel_system_api.dart';
+import 'package:actpod_studio/api/space_system_api.dart';
+import 'package:actpod_studio/api/user_system_api.dart';
 import 'package:actpod_studio/features/create_story/models/channel_model.dart';
 import 'package:actpod_studio/features/create_story/models/space_model.dart';
 import 'package:actpod_studio/features/create_story/models/user_model.dart';
@@ -213,7 +212,7 @@ class CreateState {
       imageFilesBytes: imageFilesBytes ?? this.imageFilesBytes,
       // Upload / Highlight
       audios: audios ?? this.audios,
-      uploadingAudio: uploadingAudio?? this.uploadingAudio,
+      uploadingAudio: uploadingAudio ?? this.uploadingAudio,
       selectedAudioId: selectedAudioId ?? this.selectedAudioId,
       highlightLength: highlightLength ?? this.highlightLength,
       selectionStart: selectionStart ?? this.selectionStart,
@@ -222,7 +221,7 @@ class CreateState {
       // Settings
       pricePodcoin: pricePodcoin ?? this.pricePodcoin,
       publishMode: publishMode ?? this.publishMode,
-      scheduledAt: scheduledAt ?? this.scheduledAt, 
+      scheduledAt: scheduledAt ?? this.scheduledAt,
       collaborator: collaborator ?? this.collaborator,
       searchUserList: searchUserList ?? this.searchUserList,
       // Others
@@ -303,7 +302,7 @@ class CreateController extends Notifier<CreateState> {
   }
 
   void clear() {
-    state=state.copyWith(
+    state = state.copyWith(
       currentPage: 0,
       title: null,
       description: null,
@@ -573,23 +572,12 @@ class CreateController extends Notifier<CreateState> {
   // -------------------------
   Future<void> getSpaceList() async {
     final spaceResponse = await SpaceApi().getSpaces();
-    final spaceListData = spaceResponse.data['data'] as List;
-    state = state.copyWith(
-      spaces: spaceListData
-          .whereType<Map<String, dynamic>>()
-          .map((e) => Space.fromJson(e))
-          .toList(),
-    );
+    state = state.copyWith(spaces: spaceResponse.spaces);
   }
 
   void getUserChannels(String userId) async {
     final channelResponse = await ChannelApi().getUserChannels(userId);
-    final channelListData = channelResponse.data['data'] as List;
-    state = state.copyWith(
-      channels: channelListData.map((e) {
-        return Channel.fromJson(e);
-      }).toList(),
-    );
+    state = state.copyWith(channels: channelResponse.channels);
   }
 
   void setTitle(String v) => state = state.copyWith(title: v);
@@ -608,7 +596,9 @@ class CreateController extends Notifier<CreateState> {
       final imageBytesList = <Uint8List>[];
       final imagePathList = <String>[];
 
-      final filesWithBytes =  result.files.where((f) => f.bytes != null).toList();
+      final filesWithBytes = result.files
+          .where((f) => f.bytes != null)
+          .toList();
       if (filesWithBytes.isEmpty) return;
 
       for (final file in filesWithBytes) {
@@ -645,10 +635,7 @@ class CreateController extends Notifier<CreateState> {
     bytes.insert(newIndex, movedBytes);
     paths.insert(newIndex, movedPath);
 
-    state = state.copyWith(
-      imageFilesBytes: bytes,
-      imageFilePaths: paths,
-    );
+    state = state.copyWith(imageFilesBytes: bytes, imageFilePaths: paths);
   }
 
   void clearCover() =>
@@ -696,11 +683,8 @@ class CreateController extends Notifier<CreateState> {
     }
     final res = await UserApi().searchUser(keyword);
     print(res);
-    final users = res["data"]
-        .map<UserInfo>((json) => UserInfo.fromJson(json))
-        .toList();
 
-    state = state.copyWith(searchUserList: users);
+    state = state.copyWith(searchUserList: res.users);
   }
 
   void addCollaborator(UserInfo collerator) {
@@ -708,7 +692,9 @@ class CreateController extends Notifier<CreateState> {
   }
 
   void removeCollaborator() {
-    state = state.copyWith(collaborator: UserInfo(userId: "", name: "", avatarUrl: "", email: ""));
+    state = state.copyWith(
+      collaborator: UserInfo(userId: "", name: "", avatarUrl: "", email: ""),
+    );
   }
 
   // -------------------------

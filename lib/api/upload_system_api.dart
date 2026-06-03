@@ -1,13 +1,17 @@
 import 'dart:typed_data';
 
-import 'package:actpod_studio/features/api/api.dart';
-import 'package:dio/dio.dart';
+import 'package:actpod_studio/api/api.dart';
+import 'package:actpod_studio/api/response/upload_response/upload_story_content.dart';
+import 'package:actpod_studio/api/response/upload_response/upload_story_image.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:mime/mime.dart' as m;
 
 class UploadApi {
-  Future<String> uploadStoryContent(String filename, Uint8List bytes) async {
+  Future<UploadStoryContentResponse> uploadStoryContent(
+    String filename,
+    Uint8List bytes,
+  ) async {
     final mimeType = _MimeHelper.resolve(
       filename,
       headerBytes: bytes.take(32).toList().cast<int>().asUint8List(),
@@ -15,13 +19,16 @@ class UploadApi {
     final contentType = _MimeHelper.toBackendContentType(filename);
 
     var req = {"contentType": contentType};
-    Response getUrlResponse = await DioClient.handelPostWithToken(
+    final getUrlResponse = await DioClient.handelPostWithToken(
       "/file/story/content",
       req,
     );
+    final uploadStoryContentResponse = UploadStoryContentResponse.fromResponse(
+      getUrlResponse,
+    );
 
     final response = await http.put(
-      Uri.parse(getUrlResponse.data['data']['signedUrl']),
+      Uri.parse(uploadStoryContentResponse.signedUrl),
       headers: {'Content-Type': mimeType},
       body: bytes,
     );
@@ -29,17 +36,23 @@ class UploadApi {
     if (response.statusCode != 200) {
       throw Exception('Upload failed: ${response.statusCode}');
     }
-    return getUrlResponse.data['data']['publicUrl'];
+    return uploadStoryContentResponse;
   }
 
-  Future<String> uploadStoryImage(String filename, Uint8List bytes) async {
-    Response getUrlResponse = await DioClient.handelPostWithToken(
+  Future<UploadStoryImageResponse> uploadStoryImage(
+    String filename,
+    Uint8List bytes,
+  ) async {
+    final getUrlResponse = await DioClient.handelPostWithToken(
       "/file/story/image",
       {},
     );
+    final uploadStoryImageResponse = UploadStoryImageResponse.fromResponse(
+      getUrlResponse,
+    );
 
     final response = await http.put(
-      Uri.parse(getUrlResponse.data['data']['signedUrl']),
+      Uri.parse(uploadStoryImageResponse.signedUrl),
       headers: {'Content-Type': 'application/octet-stream'},
       body: bytes,
     );
@@ -47,7 +60,7 @@ class UploadApi {
     if (response.statusCode != 200) {
       throw Exception('Upload failed: ${response.statusCode}');
     }
-    return getUrlResponse.data['data']['publicUrl'];
+    return uploadStoryImageResponse;
   }
 }
 
