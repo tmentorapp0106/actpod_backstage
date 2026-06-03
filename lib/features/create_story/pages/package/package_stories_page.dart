@@ -60,12 +60,6 @@ class PackageStoriesStep extends ConsumerWidget {
                     const Icon(Icons.library_add_rounded, size: 36),
                     const SizedBox(height: 10),
                     const Text('尚未新增故事'),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: ctrl.addStory,
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text('新增第一個 Story'),
-                    ),
                   ],
                 ),
               ),
@@ -196,15 +190,16 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
                 if (story.audio != null)
                   _InfoChip(
                     icon: Icons.check_circle_rounded,
-                    label:
-                        '${story.audio!.fileName} ・ ${_fmtDuration(story.audio!.duration)}',
+                    label: story.audio!.duration == Duration.zero
+                        ? story.audio!.fileName
+                        : '${story.audio!.fileName} ・ ${_fmtDuration(story.audio!.duration)}',
                   ),
                 OutlinedButton.icon(
                   onPressed: canPickCover
                       ? () => ctrl.pickStoryCover(story.id)
                       : null,
                   icon: const Icon(Icons.image_rounded),
-                  label: Text(story.imageFilesBytes.isEmpty ? '上傳封面' : '更換封面'),
+                  label: Text(story.imageFilesBytes.isEmpty ? '上傳圖片' : '更換圖片'),
                 ),
                 if (isPickingCover) const _InlineLoading(),
                 if (story.imageFilesBytes.isNotEmpty)

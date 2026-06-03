@@ -6,7 +6,6 @@ import 'package:actpod_studio/features/create_story/models/space_model.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:just_audio/just_audio.dart';
 
 const _unset = Object();
 
@@ -204,61 +203,62 @@ class PackageCreateController extends Notifier<PackageCreateState> {
     if (state.pickingAudioStoryId != null) return;
 
     state = state.copyWith(uploadingAudio: true, pickingAudioStoryId: storyId);
-    FilePickerResult? result;
     try {
-      result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         allowMultiple: false,
         type: FileType.custom,
         allowedExtensions: const ['mp3'],
-        withData: true,
+        withData: false,
+        withReadStream: true,
       );
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+      final audio = UploadedAudio(
+        id: _genId(file.name),
+        name: file.name,
+        fileName: file.name,
+        fileBytes: Uint8List(0),
+        readStream: file.readStream,
+        fileSize: file.size,
+        duration: Duration.zero,
+        path: file.path ?? file.name,
+      );
+
+      _updateStory(storyId, (story) => story.copyWith(audio: audio));
     } finally {
       state = state.copyWith(uploadingAudio: false, pickingAudioStoryId: null);
     }
-    if (result == null || result.files.isEmpty) return;
-
-    final file = result.files.first;
-    final audio = UploadedAudio(
-      id: _genId(file.name),
-      name: file.name,
-      fileName: file.name,
-      fileBytes: file.bytes ?? Uint8List(0),
-      duration: Duration.zero,
-      path: file.path ?? file.name,
-    );
-
-    _updateStory(storyId, (story) => story.copyWith(audio: audio));
-    _probeStoryDuration(storyId, audio);
   }
 
   Future<void> pickStoryCover(String storyId) async {
     if (state.pickingCoverStoryId != null) return;
 
     state = state.copyWith(pickingCoverStoryId: storyId);
-    FilePickerResult? result;
     try {
-      result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
         withData: true,
         allowMultiple: true,
       );
+      if (result == null || result.files.isEmpty) return;
+
+      final paths = <String>[];
+      final bytes = <Uint8List>[];
+      for (final file in result.files.where((file) => file.bytes != null)) {
+        paths.add(file.name);
+        bytes.add(file.bytes!);
+      }
+      if (bytes.isEmpty) return;
+
+      _updateStory(
+        storyId,
+        (story) =>
+            story.copyWith(imageFilePaths: paths, imageFilesBytes: bytes),
+      );
     } finally {
       state = state.copyWith(pickingCoverStoryId: null);
     }
-    if (result == null || result.files.isEmpty) return;
-
-    final paths = <String>[];
-    final bytes = <Uint8List>[];
-    for (final file in result.files.where((file) => file.bytes != null)) {
-      paths.add(file.name);
-      bytes.add(file.bytes!);
-    }
-    if (bytes.isEmpty) return;
-
-    _updateStory(
-      storyId,
-      (story) => story.copyWith(imageFilePaths: paths, imageFilesBytes: bytes),
-    );
   }
 
   void setPublishMode(PublishMode mode) {
@@ -283,63 +283,8 @@ class PackageCreateController extends Notifier<PackageCreateState> {
     );
   }
 
-  Future<void> _probeStoryDuration(String storyId, UploadedAudio audio) async {
-    final player = AudioPlayer();
-    try {
-      if (audio.fileBytes.isNotEmpty) {
-        await player.setUrl(
-          Uri.dataFromBytes(
-            audio.fileBytes,
-            mimeType: _mimeFromName(audio.fileName),
-          ).toString(),
-        );
-      } else if (audio.path.isNotEmpty) {
-        await player.setFilePath(audio.path);
-      } else {
-        return;
-      }
-
-      var duration = player.duration ?? Duration.zero;
-      if (duration == Duration.zero) {
-        final streamDuration = await player.durationStream
-            .firstWhere((d) => d != null)
-            .timeout(const Duration(seconds: 3), onTimeout: () => null);
-        duration = streamDuration ?? Duration.zero;
-      }
-
-      _updateStory(
-        storyId,
-        (story) => story.copyWith(audio: audio.copyWith(duration: duration)),
-      );
-    } catch (_) {
-      _updateStory(storyId, (story) => story.copyWith(audio: audio));
-    } finally {
-      await player.dispose();
-    }
-  }
-
   String _genId(String seed) =>
       '${DateTime.now().microsecondsSinceEpoch}_${seed.hashCode}';
-
-  String _mimeFromName(String name) {
-    final ext = name.split('.').last.toLowerCase();
-    switch (ext) {
-      case 'mp3':
-        return 'audio/mpeg';
-      case 'm4a':
-        return 'audio/mp4';
-      case 'aac':
-        return 'audio/aac';
-      case 'wav':
-        return 'audio/wav';
-      case 'flac':
-        return 'audio/flac';
-      case 'ogg':
-        return 'audio/ogg';
-      default:
-        return 'application/octet-stream';
-    }
-  }
 }
 
 final packageCreateControllerProvider =

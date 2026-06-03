@@ -39,6 +39,39 @@ class UploadApi {
     return uploadStoryContentResponse;
   }
 
+  Future<UploadStoryContentResponse> uploadStoryContentStream(
+    String filename,
+    Stream<List<int>> stream,
+    int contentLength,
+  ) async {
+    final mimeType = _MimeHelper.resolve(filename);
+    final contentType = _MimeHelper.toBackendContentType(filename);
+
+    var req = {"contentType": contentType};
+    final getUrlResponse = await DioClient.handelPostWithToken(
+      "/file/story/content",
+      req,
+    );
+    final uploadStoryContentResponse = UploadStoryContentResponse.fromResponse(
+      getUrlResponse,
+    );
+
+    final request = http.StreamedRequest(
+      'PUT',
+      Uri.parse(uploadStoryContentResponse.signedUrl),
+    );
+    request.headers['Content-Type'] = mimeType;
+    request.contentLength = contentLength;
+    await request.sink.addStream(stream);
+    await request.sink.close();
+
+    final response = await request.send();
+    if (response.statusCode != 200) {
+      throw Exception('Upload failed: ${response.statusCode}');
+    }
+    return uploadStoryContentResponse;
+  }
+
   Future<UploadStoryImageResponse> uploadStoryImage(
     String filename,
     Uint8List bytes,

@@ -208,10 +208,13 @@ class StepButton extends ConsumerWidget {
     PackageStoryDraft story,
   ) async {
     final audio = story.audio!;
-    final contentResponse = await UploadApi().uploadStoryContent(
-      audio.fileName,
-      audio.fileBytes,
-    );
+    final contentResponse = audio.readStream != null && audio.fileSize > 0
+        ? await UploadApi().uploadStoryContentStream(
+            audio.fileName,
+            audio.readStream!,
+            audio.fileSize,
+          )
+        : await UploadApi().uploadStoryContent(audio.fileName, audio.fileBytes);
     final uploadImageFutures = List.generate(
       story.imageFilePaths.length,
       (i) => UploadApi().uploadStoryImage(

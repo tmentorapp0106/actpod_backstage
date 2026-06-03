@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 /// 發布方式（即時 / 排程）
@@ -9,6 +10,8 @@ class UploadedAudio {
   final String name;
   final String fileName;
   final Uint8List fileBytes;
+  final Stream<List<int>>? readStream;
+  final int fileSize;
   final Duration duration;
   final String path;
 
@@ -17,6 +20,8 @@ class UploadedAudio {
     required this.name,
     required this.fileName,
     required this.fileBytes,
+    this.readStream,
+    this.fileSize = 0,
     required this.duration,
     required this.path,
   });
@@ -26,6 +31,8 @@ class UploadedAudio {
     String? name,
     String? fileName,
     Uint8List? fileBytes,
+    Stream<List<int>>? readStream,
+    int? fileSize,
     Duration? duration,
     String? path,
   }) {
@@ -34,6 +41,8 @@ class UploadedAudio {
       name: name ?? this.name,
       fileName: fileName ?? this.fileName,
       fileBytes: fileBytes ?? this.fileBytes,
+      readStream: readStream ?? this.readStream,
+      fileSize: fileSize ?? this.fileSize,
       duration: duration ?? this.duration,
       path: path ?? this.path,
     );
