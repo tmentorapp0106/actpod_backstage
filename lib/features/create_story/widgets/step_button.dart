@@ -96,7 +96,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
       case 3:
         return singleState.hasValidSettings;
       case 4:
-        return true;
+        return singleState.probingDurationAudioIds.isEmpty;
       default:
         return false;
     }
@@ -119,6 +119,17 @@ class _StepButtonState extends ConsumerState<StepButton> {
         ref
             .read(packageCreateControllerProvider)
             .probingDurationStoryIds
+            .isNotEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('音檔時長解析中，完成後才能發布')));
+      return;
+    }
+
+    if (flow.flowType != CreateFlowType.package &&
+        ref
+            .read(singleCreateControllerProvider)
+            .probingDurationAudioIds
             .isNotEmpty) {
       ScaffoldMessenger.of(
         context,

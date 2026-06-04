@@ -9,11 +9,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
 
 /// ====== 預覽畫面（接 Riverpod，把使用者填寫的資料帶進卡片） ======
-class PreviewStep extends ConsumerWidget {
+class PreviewStep extends ConsumerStatefulWidget {
   const PreviewStep({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PreviewStep> createState() => _PreviewStepState();
+}
+
+class _PreviewStepState extends ConsumerState<PreviewStep> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(singleCreateControllerProvider.notifier).probeMissingDurations();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(singleCreateControllerProvider);
     final userName = ref.read(userControllerProvider)?.name;
 
@@ -51,6 +64,10 @@ class PreviewStep extends ConsumerWidget {
           authorName: authorName.isNotEmpty ? authorName : '作者',
           coverUrl: coverUrl,
           imageBytes: state.imageFilesBytes!.first,
+          storyLength: state.selectedAudio?.duration ?? Duration.zero,
+          isProbingStoryLength: state.probingDurationAudioIds.contains(
+            state.selectedAudioId,
+          ),
           // 若是排程則顯示排程時間，否則顯示現在（或你的建立時間）
           dateTime: isScheduled
               ? scheduledAt ?? DateTime.now()
@@ -77,6 +94,8 @@ class _StoryCardPreview extends StatelessWidget {
   final int listens;
   final bool showNewBadge;
   final Uint8List imageBytes;
+  final Duration storyLength;
+  final bool isProbingStoryLength;
 
   const _StoryCardPreview({
     required this.title,
@@ -86,6 +105,8 @@ class _StoryCardPreview extends StatelessWidget {
     required this.authorName,
     required this.dateTime,
     required this.imageBytes,
+    required this.storyLength,
+    required this.isProbingStoryLength,
     this.coverUrl,
     this.listens = 0,
     this.showNewBadge = false,
@@ -114,7 +135,7 @@ class _StoryCardPreview extends StatelessWidget {
                         width: 110,
                         height: 110,
                         child: coverUrl == null || coverUrl!.isEmpty
-                            ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                            ? Image.memory(imageBytes, fit: BoxFit.cover)
                             : Image.network(coverUrl!, fit: BoxFit.cover),
                       ),
                       Positioned(
@@ -126,7 +147,7 @@ class _StoryCardPreview extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(.55),
+                            color: Colors.black.withValues(alpha: .55),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -174,6 +195,13 @@ class _StoryCardPreview extends StatelessWidget {
                       const SizedBox(height: 4),
                       if (authorName.isNotEmpty)
                         _LineMeta(icon: Icons.person_rounded, text: authorName),
+                      const SizedBox(height: 4),
+                      _LineMeta(
+                        icon: Icons.timer_outlined,
+                        text: isProbingStoryLength
+                            ? '解析中...'
+                            : _fmtDuration(storyLength),
+                      ),
                       const SizedBox(height: 8),
                       _TagChip(label: selectedSpace), // 之後可用實際 space tag
                     ],
@@ -252,14 +280,18 @@ class _StoryCardPreview extends StatelessWidget {
   }
 }
 
+String _fmtDuration(Duration duration) {
+  if (duration == Duration.zero) return '--:--';
+  final mm = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+  final ss = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+  return '$mm:$ss';
+}
+
 /// 超簡單日期格式（可換成 intl）
 String _fmt(DateTime dt) {
   final y = dt.year.toString().padLeft(4, '0');
   final m = dt.month.toString().padLeft(2, '0');
   final d = dt.day.toString().padLeft(2, '0');
-  final hh = dt.hour.toString().padLeft(2, '0');
-  final mm = dt.minute.toString().padLeft(2, '0');
-  // return '$y-$m-$d $hh:$mm';
   return '$y-$m-$d';
 }
 

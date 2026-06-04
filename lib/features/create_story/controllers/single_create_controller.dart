@@ -22,6 +22,7 @@ class SingleCreateState {
   final List<Uint8List>? imageFilesBytes;
   final List<UploadedAudio> audios;
   final bool uploadingAudio;
+  final List<String> probingDurationAudioIds;
   final String? selectedAudioId;
   final Duration highlightLength;
   final Duration selectionStart;
@@ -44,6 +45,7 @@ class SingleCreateState {
     this.imageFilesBytes,
     this.audios = const [],
     this.uploadingAudio = false,
+    this.probingDurationAudioIds = const [],
     this.selectedAudioId,
     this.highlightLength = const Duration(seconds: 20),
     this.selectionStart = Duration.zero,
@@ -92,6 +94,7 @@ class SingleCreateState {
     List<Uint8List>? imageFilesBytes,
     List<UploadedAudio>? audios,
     bool? uploadingAudio,
+    List<String>? probingDurationAudioIds,
     String? selectedAudioId,
     Duration? highlightLength,
     Duration? selectionStart,
@@ -114,6 +117,8 @@ class SingleCreateState {
       imageFilesBytes: imageFilesBytes ?? this.imageFilesBytes,
       audios: audios ?? this.audios,
       uploadingAudio: uploadingAudio ?? this.uploadingAudio,
+      probingDurationAudioIds:
+          probingDurationAudioIds ?? this.probingDurationAudioIds,
       selectedAudioId: selectedAudioId ?? this.selectedAudioId,
       highlightLength: highlightLength ?? this.highlightLength,
       selectionStart: selectionStart ?? this.selectionStart,
@@ -299,6 +304,60 @@ class SingleCreateController extends Notifier<SingleCreateState> {
     );
   }
 
+  Future<void> probeMissingDurations() async {
+    final audioIds = state.audios
+        .where(
+          (audio) =>
+              audio.duration == Duration.zero &&
+              !state.probingDurationAudioIds.contains(audio.id),
+        )
+        .map((audio) => audio.id)
+        .toList();
+
+    for (final audioId in audioIds) {
+      await probeAudioDuration(audioId);
+    }
+  }
+
+  Future<void> probeAudioDuration(String audioId) async {
+    final audio = _findAudio(audioId);
+    if (audio == null ||
+        audio.duration != Duration.zero ||
+        state.probingDurationAudioIds.contains(audioId)) {
+      return;
+    }
+
+    _setDurationProbing(audioId, true);
+
+    var bytes = audio.fileBytes;
+    var fileSize = audio.fileSize;
+    var duration = Duration.zero;
+
+    try {
+      if (!kIsWeb && _hasRealFilePath(audio)) {
+        duration = await _probeDurationFromFilePath(audio.path);
+      } else {
+        if (bytes.isEmpty && audio.readStream != null) {
+          bytes = await _readAllBytes(audio.readStream!);
+          fileSize = bytes.length;
+        }
+        if (bytes.isNotEmpty) {
+          duration = await _probeDurationFromBytes(bytes, audio.fileName);
+        }
+      }
+    } finally {
+      _updateAudioData(
+        audioId,
+        audio,
+        bytes: bytes,
+        fileSize: fileSize,
+        duration: duration,
+        clearReadStream: bytes.isNotEmpty && audio.fileBytes.isEmpty,
+      );
+      _setDurationProbing(audioId, false);
+    }
+  }
+
   Future<void> _probeDurationAndUpdate(String audioId) async {
     final audio = state.audios
         .where((item) => item.id == audioId)
@@ -390,6 +449,108 @@ class SingleCreateController extends Notifier<SingleCreateState> {
 
   bool _hasRealFilePath(UploadedAudio audio) {
     return audio.path.isNotEmpty && audio.path != audio.fileName;
+  }
+
+  UploadedAudio? _findAudio(String audioId) {
+    for (final audio in state.audios) {
+      if (audio.id == audioId) return audio;
+    }
+    return null;
+  }
+
+  void _updateAudioData(
+    String audioId,
+    UploadedAudio current, {
+    required Uint8List bytes,
+    required int fileSize,
+    required Duration duration,
+    required bool clearReadStream,
+  }) {
+    final updated = [
+      for (final audio in state.audios)
+        if (audio.id == audioId)
+          UploadedAudio(
+            id: current.id,
+            name: current.name,
+            fileName: current.fileName,
+            fileBytes: bytes,
+            readStream: clearReadStream ? null : current.readStream,
+            fileSize: fileSize,
+            duration: duration,
+            path: current.path,
+          )
+        else
+          audio,
+    ];
+
+    var newEnd = state.selectionEnd;
+    if (state.selectedAudioId == audioId) {
+      final desiredEnd = state.selectionStart + state.highlightLength;
+      newEnd = desiredEnd > duration ? duration : desiredEnd;
+    }
+
+    state = state.copyWith(audios: updated, selectionEnd: newEnd);
+  }
+
+  void _setDurationProbing(String audioId, bool isProbing) {
+    final ids = state.probingDurationAudioIds.toSet();
+    if (isProbing) {
+      ids.add(audioId);
+    } else {
+      ids.remove(audioId);
+    }
+    state = state.copyWith(probingDurationAudioIds: ids.toList());
+  }
+
+  Future<Duration> _probeDurationFromFilePath(String path) async {
+    final player = AudioPlayer();
+    try {
+      await player.setFilePath(path);
+      var duration = player.duration ?? Duration.zero;
+      if (duration == Duration.zero) {
+        final streamDuration = await player.durationStream
+            .firstWhere((d) => d != null)
+            .timeout(const Duration(seconds: 3), onTimeout: () => null);
+        duration = streamDuration ?? Duration.zero;
+      }
+      return duration;
+    } catch (_) {
+      return Duration.zero;
+    } finally {
+      await player.dispose();
+    }
+  }
+
+  Future<Duration> _probeDurationFromBytes(
+    Uint8List bytes,
+    String fileName,
+  ) async {
+    final player = AudioPlayer();
+    try {
+      await player.setUrl(
+        Uri.dataFromBytes(bytes, mimeType: _mimeFromName(fileName)).toString(),
+      );
+      var duration = player.duration ?? Duration.zero;
+      if (duration == Duration.zero) {
+        final streamDuration = await player.durationStream
+            .firstWhere((d) => d != null)
+            .timeout(const Duration(seconds: 3), onTimeout: () => null);
+        duration = streamDuration ?? Duration.zero;
+      }
+      return duration;
+    } catch (_) {
+      return Duration.zero;
+    } finally {
+      await player.dispose();
+    }
+  }
+
+  Future<Uint8List> _readAllBytes(Stream<List<int>> stream) async {
+    final chunks = <int>[];
+    await for (final chunk in stream) {
+      chunks.addAll(chunk);
+    }
+    return Uint8List.fromList(chunks);
   }
 }
 
