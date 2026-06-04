@@ -2,7 +2,6 @@ import 'package:actpod_studio/app/theme/theme.dart';
 import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,7 +25,8 @@ class UploadArea extends ConsumerWidget {
       allowMultiple: false,
       type: FileType.custom,
       allowedExtensions: allowedExtensions,
-      withData: kIsWeb, // web 取 bytes
+      withData: false,
+      withReadStream: true,
     );
     ref.read(singleCreateControllerProvider.notifier).setLoadingAudio(false);
     if (result != null && result.files.isNotEmpty) {

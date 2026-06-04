@@ -129,13 +129,10 @@ class SingleCreateState {
 }
 
 class SingleCreateController extends Notifier<SingleCreateState> {
-  final Map<String, PlatformFile> _fileCache = {};
-
   @override
   SingleCreateState build() => const SingleCreateState();
 
   void clear() {
-    _fileCache.clear();
     state = SingleCreateState(spaces: state.spaces, channels: state.channels);
   }
 
@@ -165,13 +162,14 @@ class SingleCreateController extends Notifier<SingleCreateState> {
     final newAudios = <UploadedAudio>[];
     for (final file in files) {
       final id = _genId(file.name);
-      _fileCache[id] = file;
       newAudios.add(
         UploadedAudio(
           id: id,
           name: file.name,
           fileName: file.name,
-          fileBytes: file.bytes ?? Uint8List(0),
+          fileBytes: Uint8List(0),
+          readStream: file.readStream,
+          fileSize: file.size,
           duration: Duration.zero,
           path: file.path ?? file.name,
         ),
@@ -302,27 +300,21 @@ class SingleCreateController extends Notifier<SingleCreateState> {
   }
 
   Future<void> _probeDurationAndUpdate(String audioId) async {
-    final file = _fileCache[audioId];
-    if (file == null) return;
+    final audio = state.audios
+        .where((item) => item.id == audioId)
+        .cast<UploadedAudio?>()
+        .firstWhere((item) => item != null, orElse: () => null);
+    if (audio == null) return;
 
     final player = AudioPlayer();
     try {
-      if (kIsWeb) {
-        final bytes = file.bytes;
-        if (bytes == null) return;
+      if (!kIsWeb && _hasRealFilePath(audio)) {
+        await player.setFilePath(audio.path);
+      } else if (audio.fileBytes.isNotEmpty) {
         await player.setUrl(
           Uri.dataFromBytes(
-            bytes,
-            mimeType: _mimeFromName(file.name),
-          ).toString(),
-        );
-      } else if (file.path != null) {
-        await player.setFilePath(file.path!);
-      } else if (file.bytes != null) {
-        await player.setUrl(
-          Uri.dataFromBytes(
-            file.bytes!,
-            mimeType: _mimeFromName(file.name),
+            audio.fileBytes,
+            mimeType: _mimeFromName(audio.fileName),
           ).toString(),
         );
       } else {
@@ -394,6 +386,10 @@ class SingleCreateController extends Notifier<SingleCreateState> {
     if (end < Duration.zero) return Duration.zero;
     if (end > audioLen) return audioLen;
     return end;
+  }
+
+  bool _hasRealFilePath(UploadedAudio audio) {
+    return audio.path.isNotEmpty && audio.path != audio.fileName;
   }
 }
 

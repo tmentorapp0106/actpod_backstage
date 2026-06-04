@@ -1,13 +1,27 @@
+import 'package:actpod_studio/api/response/story_response/create_package.dart';
+import 'package:actpod_studio/api/response/story_response/create_package_story.dart';
+import 'package:actpod_studio/api/response/story_response/upload_story.dart';
+import 'package:actpod_studio/api/response/upload_response/upload_package_image.dart';
+import 'package:actpod_studio/api/response/upload_response/upload_story_content.dart';
+import 'package:actpod_studio/api/response/upload_response/upload_story_image.dart';
 import 'package:actpod_studio/api/story_system_api.dart';
 import 'package:actpod_studio/api/upload_system_api.dart';
 import 'package:actpod_studio/features/create_story/const.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_flow_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/package_create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/create_shared_models.dart';
 import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
 import 'package:actpod_studio/features/create_story/widgets/step_nav_bar.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:just_audio/just_audio.dart';
+
+const _useMockUpload = bool.fromEnvironment(
+  'MOCK_STORY_UPLOAD',
+  defaultValue: false,
+);
 
 class StepButton extends ConsumerStatefulWidget {
   final int stepIndex;
@@ -124,11 +138,14 @@ class _StepButtonState extends ConsumerState<StepButton> {
 
     try {
       if (flow.flowType == CreateFlowType.package) {
-        await _submitPackage(ref, ref.read(packageCreateControllerProvider));
+        await _submitPackage(
+          flowCtrl,
+          ref.read(packageCreateControllerProvider),
+        );
         if (!mounted) return;
         packageCtrl.clear();
       } else {
-        await _submitSingle(ref, ref.read(singleCreateControllerProvider));
+        await _submitSingle(flowCtrl, ref.read(singleCreateControllerProvider));
         if (!mounted) return;
         singleCtrl.clear();
       }
@@ -158,23 +175,26 @@ class _StepButtonState extends ConsumerState<StepButton> {
     }
   }
 
-  Future<void> _submitSingle(WidgetRef ref, SingleCreateState state) async {
-    final uploaded = await _uploadSingleAssets(ref, state);
+  Future<void> _submitSingle(
+    CreateFlowController flowCtrl,
+    SingleCreateState state,
+  ) async {
+    final uploaded = await _uploadSingleAssets(flowCtrl, state);
     final ids = _selectedSingleIds(state);
 
     await _runUploadStep(
-      ref,
+      flowCtrl,
       'single-publish',
-      () => StoryApi().uploadStory(
+      () => _uploadStory(
         ids.spaceId,
         ids.channelId,
         uploaded.contentUrl,
         state.title!,
         state.description!,
         uploaded.imageUrls,
-        state.audios[0].duration.inMilliseconds,
-        (state.audios[0].duration.inMilliseconds / 2).toInt(),
-        (state.audios[0].duration.inMilliseconds / 2).toInt() + 20 * 1000,
+        uploaded.duration.inMilliseconds,
+        (uploaded.duration.inMilliseconds / 2).toInt(),
+        (uploaded.duration.inMilliseconds / 2).toInt() + 20 * 1000,
         "enable",
         state.pricePodcoin > 0,
         state.pricePodcoin,
@@ -184,13 +204,16 @@ class _StepButtonState extends ConsumerState<StepButton> {
     );
   }
 
-  Future<void> _submitPackage(WidgetRef ref, PackageCreateState state) async {
+  Future<void> _submitPackage(
+    CreateFlowController flowCtrl,
+    PackageCreateState state,
+  ) async {
     final uploadedStories = <_UploadedPackageStory>[];
     final ids = _selectedPackageIds(state);
     final packageImageResponse = await _runUploadStep(
-      ref,
+      flowCtrl,
       'package-image',
-      () => UploadApi().uploadPackageImage(
+      () => _uploadPackageImage(
         state.packageImagePath!,
         state.packageImageBytes!,
       ),
@@ -198,14 +221,14 @@ class _StepButtonState extends ConsumerState<StepButton> {
 
     for (var i = 0; i < state.stories.length; i++) {
       uploadedStories.add(
-        await _uploadPackageStoryAssets(ref, state.stories[i], i),
+        await _uploadPackageStoryAssets(flowCtrl, state.stories[i], i),
       );
     }
 
     final packageResponse = await _runUploadStep(
-      ref,
+      flowCtrl,
       'package-create',
-      () => StoryApi().createPackage(
+      () => _createPackage(
         state.packageName!,
         state.packageDescription!,
         packageImageResponse.publicUrl,
@@ -219,9 +242,9 @@ class _StepButtonState extends ConsumerState<StepButton> {
     for (var i = 0; i < uploadedStories.length; i++) {
       final uploadedStory = uploadedStories[i];
       await _runUploadStep(
-        ref,
+        flowCtrl,
         'package-story-create-$i',
-        () => StoryApi().createPackageStory(
+        () => _createPackageStory(
           packageResponse.packageId,
           uploadedStory.contentUrl,
           uploadedStory.title,
@@ -239,23 +262,31 @@ class _StepButtonState extends ConsumerState<StepButton> {
   }
 
   Future<_UploadedStoryAssets> _uploadSingleAssets(
-    WidgetRef ref,
+    CreateFlowController flowCtrl,
     SingleCreateState state,
   ) async {
+    _PreparedUploadAudio? preparedAudio;
     final contentResponse = await _runUploadStep(
-      ref,
+      flowCtrl,
       'single-audio',
-      () => UploadApi().uploadStoryContent(
-        state.audios[0].fileName,
-        state.audios[0].fileBytes,
-      ),
+      () async {
+        preparedAudio = await _prepareAudioForUpload(state.audios[0]);
+        final audio = preparedAudio!;
+        return audio.readStream != null && audio.fileSize > 0
+            ? _uploadStoryContentStream(
+                audio.fileName,
+                audio.readStream!,
+                audio.fileSize,
+              )
+            : _uploadStoryContent(audio.fileName, audio.fileBytes);
+      },
     );
     final imageUrls = <String>[];
     for (var i = 0; i < (state.imageFilePaths?.length ?? 0); i++) {
       final imageResponse = await _runUploadStep(
-        ref,
+        flowCtrl,
         'single-image-$i',
-        () => UploadApi().uploadStoryImage(
+        () => _uploadStoryImage(
           state.imageFilePaths![i],
           state.imageFilesBytes![i],
         ),
@@ -266,32 +297,33 @@ class _StepButtonState extends ConsumerState<StepButton> {
     return _UploadedStoryAssets(
       contentUrl: contentResponse.publicUrl,
       imageUrls: imageUrls,
+      duration: preparedAudio?.duration ?? Duration.zero,
     );
   }
 
   Future<_UploadedPackageStory> _uploadPackageStoryAssets(
-    WidgetRef ref,
+    CreateFlowController flowCtrl,
     PackageStoryDraft story,
     int storyIndex,
   ) async {
     final audio = story.audio!;
     final contentResponse = await _runUploadStep(
-      ref,
+      flowCtrl,
       'package-story-audio-$storyIndex',
       () => audio.readStream != null && audio.fileSize > 0
-          ? UploadApi().uploadStoryContentStream(
+          ? _uploadStoryContentStream(
               audio.fileName,
               audio.readStream!,
               audio.fileSize,
             )
-          : UploadApi().uploadStoryContent(audio.fileName, audio.fileBytes),
+          : _uploadStoryContent(audio.fileName, audio.fileBytes),
     );
     final imageUrls = <String>[];
     for (var i = 0; i < story.imageFilePaths.length; i++) {
       final imageResponse = await _runUploadStep(
-        ref,
+        flowCtrl,
         'package-story-image-$storyIndex-$i',
-        () => UploadApi().uploadStoryImage(
+        () => _uploadStoryImage(
           story.imageFilePaths[i],
           story.imageFilesBytes[i],
         ),
@@ -309,12 +341,12 @@ class _StepButtonState extends ConsumerState<StepButton> {
   }
 
   Future<T> _runUploadStep<T>(
-    WidgetRef ref,
+    CreateFlowController flowCtrl,
     String taskId,
     Future<T> Function() action,
   ) async {
-    final flowCtrl = ref.read(createFlowControllerProvider.notifier);
     flowCtrl.markUploadActive(taskId);
+    await Future<void>.delayed(Duration.zero);
     try {
       final result = await action();
       flowCtrl.markUploadDone(taskId);
@@ -411,15 +443,328 @@ class _StepButtonState extends ConsumerState<StepButton> {
         .channelId;
     return _SelectedIds(spaceId: spaceId, channelId: channelId);
   }
+
+  Future<_PreparedUploadAudio> _prepareAudioForUpload(
+    UploadedAudio audio,
+  ) async {
+    if (audio.duration != Duration.zero &&
+        audio.readStream != null &&
+        audio.fileSize > 0) {
+      return _PreparedUploadAudio(
+        fileName: audio.fileName,
+        fileBytes: Uint8List(0),
+        readStream: audio.readStream,
+        fileSize: audio.fileSize,
+        duration: audio.duration,
+      );
+    }
+
+    if (!kIsWeb && _hasRealFilePath(audio)) {
+      final duration = audio.duration == Duration.zero
+          ? await _probeDurationFromFilePath(audio.path)
+          : audio.duration;
+      return _PreparedUploadAudio(
+        fileName: audio.fileName,
+        fileBytes: Uint8List(0),
+        readStream: audio.readStream,
+        fileSize: audio.fileSize,
+        duration: duration,
+      );
+    }
+
+    if (audio.fileBytes.isNotEmpty) {
+      final duration = audio.duration == Duration.zero
+          ? await _probeDurationFromBytes(audio.fileBytes, audio.fileName)
+          : audio.duration;
+      return _PreparedUploadAudio(
+        fileName: audio.fileName,
+        fileBytes: audio.fileBytes,
+        fileSize: audio.fileBytes.length,
+        duration: duration,
+      );
+    }
+
+    if (audio.readStream != null) {
+      final bytes = await _readAllBytes(audio.readStream!);
+      final duration = audio.duration == Duration.zero
+          ? await _probeDurationFromBytes(bytes, audio.fileName)
+          : audio.duration;
+      return _PreparedUploadAudio(
+        fileName: audio.fileName,
+        fileBytes: bytes,
+        fileSize: bytes.length,
+        duration: duration,
+      );
+    }
+
+    return _PreparedUploadAudio(
+      fileName: audio.fileName,
+      fileBytes: audio.fileBytes,
+      fileSize: audio.fileSize,
+      duration: audio.duration,
+    );
+  }
+
+  Future<Duration> _probeDurationFromFilePath(String path) async {
+    final player = AudioPlayer();
+    try {
+      await player.setFilePath(path);
+      var duration = player.duration ?? Duration.zero;
+      if (duration == Duration.zero) {
+        final streamDuration = await player.durationStream
+            .firstWhere((d) => d != null)
+            .timeout(const Duration(seconds: 3), onTimeout: () => null);
+        duration = streamDuration ?? Duration.zero;
+      }
+      return duration;
+    } catch (_) {
+      return Duration.zero;
+    } finally {
+      await player.dispose();
+    }
+  }
+
+  Future<Duration> _probeDurationFromBytes(
+    Uint8List bytes,
+    String fileName,
+  ) async {
+    final player = AudioPlayer();
+    try {
+      await player.setUrl(
+        Uri.dataFromBytes(bytes, mimeType: _mimeFromName(fileName)).toString(),
+      );
+      var duration = player.duration ?? Duration.zero;
+      if (duration == Duration.zero) {
+        final streamDuration = await player.durationStream
+            .firstWhere((d) => d != null)
+            .timeout(const Duration(seconds: 3), onTimeout: () => null);
+        duration = streamDuration ?? Duration.zero;
+      }
+      return duration;
+    } catch (_) {
+      return Duration.zero;
+    } finally {
+      await player.dispose();
+    }
+  }
+
+  Future<Uint8List> _readAllBytes(Stream<List<int>> stream) async {
+    final chunks = <int>[];
+    await for (final chunk in stream) {
+      chunks.addAll(chunk);
+    }
+    return Uint8List.fromList(chunks);
+  }
+
+  bool _hasRealFilePath(UploadedAudio audio) {
+    return audio.path.isNotEmpty && audio.path != audio.fileName;
+  }
+
+  String _mimeFromName(String name) {
+    final ext = name.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'mp3':
+        return 'audio/mpeg';
+      case 'm4a':
+        return 'audio/mp4';
+      case 'aac':
+        return 'audio/aac';
+      case 'wav':
+        return 'audio/wav';
+      case 'flac':
+        return 'audio/flac';
+      case 'ogg':
+        return 'audio/ogg';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
+  Future<UploadStoryContentResponse> _uploadStoryContent(
+    String fileName,
+    Uint8List fileBytes,
+  ) async {
+    if (!_useMockUpload) {
+      return UploadApi().uploadStoryContent(fileName, fileBytes);
+    }
+    await Future.delayed(const Duration(milliseconds: 900));
+    return UploadStoryContentResponse(
+      code: '200',
+      message: 'mock success',
+      signedUrl: 'https://mock.local/upload/$fileName',
+      publicUrl: 'https://mock.local/story-content/$fileName',
+    );
+  }
+
+  Future<UploadStoryContentResponse> _uploadStoryContentStream(
+    String fileName,
+    Stream<List<int>> stream,
+    int contentLength,
+  ) async {
+    if (!_useMockUpload) {
+      return UploadApi().uploadStoryContentStream(
+        fileName,
+        stream,
+        contentLength,
+      );
+    }
+    await Future.delayed(const Duration(milliseconds: 900));
+    return UploadStoryContentResponse(
+      code: '200',
+      message: 'mock success',
+      signedUrl: 'https://mock.local/upload/$fileName',
+      publicUrl: 'https://mock.local/story-content/$fileName',
+    );
+  }
+
+  Future<UploadStoryImageResponse> _uploadStoryImage(
+    String fileName,
+    Uint8List fileBytes,
+  ) async {
+    if (!_useMockUpload) {
+      return UploadApi().uploadStoryImage(fileName, fileBytes);
+    }
+    await Future.delayed(const Duration(milliseconds: 700));
+    return UploadStoryImageResponse(
+      code: '200',
+      message: 'mock success',
+      signedUrl: 'https://mock.local/upload/$fileName',
+      publicUrl: 'https://mock.local/story-image/$fileName',
+    );
+  }
+
+  Future<UploadPackageImageResponse> _uploadPackageImage(
+    String fileName,
+    Uint8List fileBytes,
+  ) async {
+    if (!_useMockUpload) {
+      return UploadApi().uploadPackageImage(fileName, fileBytes);
+    }
+    await Future.delayed(const Duration(milliseconds: 700));
+    return UploadPackageImageResponse(
+      code: '200',
+      message: 'mock success',
+      signedUrl: 'https://mock.local/upload/$fileName',
+      publicUrl: 'https://mock.local/package-image/$fileName',
+    );
+  }
+
+  Future<UploadStoryResponse> _uploadStory(
+    String spaceId,
+    String channelId,
+    String contentUrl,
+    String storyName,
+    String storyDescription,
+    List<String> storyImageUrls,
+    int storyMilliSec,
+    int previewStartFrom,
+    int previewEndAt,
+    String voiceMessageStatus,
+    bool isPremium,
+    int price,
+    String? collaboratorId,
+    DateTime? releaseTime,
+  ) async {
+    if (!_useMockUpload) {
+      return StoryApi().uploadStory(
+        spaceId,
+        channelId,
+        contentUrl,
+        storyName,
+        storyDescription,
+        storyImageUrls,
+        storyMilliSec,
+        previewStartFrom,
+        previewEndAt,
+        voiceMessageStatus,
+        isPremium,
+        price,
+        collaboratorId,
+        releaseTime,
+      );
+    }
+    await Future.delayed(const Duration(milliseconds: 1200));
+    return const UploadStoryResponse(
+      code: '200',
+      message: 'mock success',
+      storyId: 'mock-story-id',
+    );
+  }
+
+  Future<CreatePackageResponse> _createPackage(
+    String packageName,
+    String packageDescription,
+    String packageImageUrl,
+    String spaceId,
+    String channelId,
+    int packagePrice,
+    int soloPrice,
+  ) async {
+    if (!_useMockUpload) {
+      return StoryApi().createPackage(
+        packageName,
+        packageDescription,
+        packageImageUrl,
+        spaceId,
+        channelId,
+        packagePrice,
+        soloPrice,
+      );
+    }
+    await Future.delayed(const Duration(milliseconds: 1200));
+    return const CreatePackageResponse(
+      code: '200',
+      message: 'mock success',
+      packageId: 'mock-package-id',
+    );
+  }
+
+  Future<CreatePackageStoryResponse> _createPackageStory(
+    String packageId,
+    String contentUrl,
+    String storyName,
+    String storyDescription,
+    List<String> storyImageUrls,
+    int storyMilliSec,
+    int previewStartFrom,
+    int previewEndAt,
+    String voiceMessageStatus,
+    String? collaboratorId,
+    DateTime? releaseTime,
+  ) async {
+    if (!_useMockUpload) {
+      return StoryApi().createPackageStory(
+        packageId,
+        contentUrl,
+        storyName,
+        storyDescription,
+        storyImageUrls,
+        storyMilliSec,
+        previewStartFrom,
+        previewEndAt,
+        voiceMessageStatus,
+        collaboratorId,
+        releaseTime,
+      );
+    }
+    await Future.delayed(const Duration(milliseconds: 1200));
+    return const CreatePackageStoryResponse(
+      code: '200',
+      message: 'mock success',
+      storyId: 'mock-package-story-id',
+    );
+  }
 }
 
 class _UploadedStoryAssets {
   final String contentUrl;
   final List<String> imageUrls;
+  final Duration duration;
 
   const _UploadedStoryAssets({
     required this.contentUrl,
     required this.imageUrls,
+    required this.duration,
   });
 }
 
@@ -428,6 +773,22 @@ class _SelectedIds {
   final String channelId;
 
   const _SelectedIds({required this.spaceId, required this.channelId});
+}
+
+class _PreparedUploadAudio {
+  final String fileName;
+  final Uint8List fileBytes;
+  final Stream<List<int>>? readStream;
+  final int fileSize;
+  final Duration duration;
+
+  const _PreparedUploadAudio({
+    required this.fileName,
+    required this.fileBytes,
+    this.readStream,
+    required this.fileSize,
+    required this.duration,
+  });
 }
 
 class _UploadedPackageStory {
