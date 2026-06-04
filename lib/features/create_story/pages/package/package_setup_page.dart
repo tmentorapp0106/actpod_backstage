@@ -105,7 +105,7 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
                 );
                 final soloPriceField = _PriceField(
                   label: '單賣價格',
-                  value: state.packageSoloPricePodcoin,
+                  value: state.packageSinglePricePodcoin,
                   onChanged: ctrl.setPackageSoloPrice,
                 );
 

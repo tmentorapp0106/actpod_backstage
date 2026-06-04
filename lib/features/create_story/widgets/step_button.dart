@@ -62,7 +62,7 @@ class StepButton extends ConsumerWidget {
         case 3:
           return packageState.hasValidSettings;
         case 4:
-          return true;
+          return packageState.probingDurationStoryIds.isEmpty;
         default:
           return false;
       }
@@ -92,10 +92,22 @@ class StepButton extends ConsumerWidget {
 
   void _submit(BuildContext context, WidgetRef ref) async {
     final flowCtrl = ref.read(createFlowControllerProvider.notifier);
+    final flow = ref.read(createFlowControllerProvider);
+
+    if (flow.flowType == CreateFlowType.package &&
+        ref
+            .read(packageCreateControllerProvider)
+            .probingDurationStoryIds
+            .isNotEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('音檔時長解析中，完成後才能發布')));
+      return;
+    }
+
     flowCtrl.setSaving(true);
 
     try {
-      final flow = ref.read(createFlowControllerProvider);
       if (flow.flowType == CreateFlowType.package) {
         await _submitPackage(ref.read(packageCreateControllerProvider));
         ref.read(packageCreateControllerProvider.notifier).clear();
@@ -104,19 +116,25 @@ class StepButton extends ConsumerWidget {
         ref.read(singleCreateControllerProvider.notifier).clear();
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已提交發布')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('已提交發布')));
+      }
     } catch (e, st) {
       debugPrint('發布失敗：$e');
       debugPrint(st.toString());
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('發布失敗：$e')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('發布失敗：$e')));
+      }
     } finally {
       flowCtrl.setSaving(false);
       flowCtrl.clear();
-      GoRouter.of(context).go('/publish/0');
+      if (context.mounted) {
+        GoRouter.of(context).go('/publish/0');
+      }
     }
   }
 
@@ -145,7 +163,7 @@ class StepButton extends ConsumerWidget {
   Future<void> _submitPackage(PackageCreateState state) async {
     final ids = _selectedPackageIds(state);
     final uploadedStories = <_UploadedPackageStory>[];
-    final packageImageResponse = await UploadApi().uploadStoryImage(
+    final packageImageResponse = await UploadApi().uploadPackageImage(
       state.packageImagePath!,
       state.packageImageBytes!,
     );
@@ -161,7 +179,7 @@ class StepButton extends ConsumerWidget {
       ids.spaceId,
       ids.channelId,
       state.packagePricePodcoin,
-      state.packageSoloPricePodcoin,
+      state.packageSinglePricePodcoin,
     );
 
     for (final uploadedStory in uploadedStories) {

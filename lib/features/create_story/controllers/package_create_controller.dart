@@ -6,6 +6,7 @@ import 'package:actpod_studio/features/create_story/models/space_model.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:just_audio/just_audio.dart';
 
 const _unset = Object();
 
@@ -59,7 +60,7 @@ class PackageCreateState {
   final String? packageImagePath;
   final Uint8List? packageImageBytes;
   final int packagePricePodcoin;
-  final int packageSoloPricePodcoin;
+  final int packageSinglePricePodcoin;
   final List<Space> spaces;
   final String? selectedSpace;
   final List<Channel> channels;
@@ -69,6 +70,7 @@ class PackageCreateState {
   final bool pickingPackageImage;
   final String? pickingAudioStoryId;
   final String? pickingCoverStoryId;
+  final List<String> probingDurationStoryIds;
   final PublishMode publishMode;
   final DateTime? scheduledAt;
   final String? error;
@@ -79,7 +81,7 @@ class PackageCreateState {
     this.packageImagePath,
     this.packageImageBytes,
     this.packagePricePodcoin = 0,
-    this.packageSoloPricePodcoin = 0,
+    this.packageSinglePricePodcoin = 0,
     this.spaces = const [],
     this.selectedSpace,
     this.channels = const [],
@@ -89,6 +91,7 @@ class PackageCreateState {
     this.pickingPackageImage = false,
     this.pickingAudioStoryId,
     this.pickingCoverStoryId,
+    this.probingDurationStoryIds = const [],
     this.publishMode = PublishMode.now,
     this.scheduledAt,
     this.error,
@@ -101,7 +104,7 @@ class PackageCreateState {
         (selectedSpace != null && selectedSpace!.isNotEmpty) &&
         (selectedChannel != null && selectedChannel!.isNotEmpty) &&
         packagePricePodcoin >= 0 &&
-        packageSoloPricePodcoin >= 0;
+        packageSinglePricePodcoin >= 0;
   }
 
   bool get hasValidStories {
@@ -129,6 +132,7 @@ class PackageCreateState {
     bool? pickingPackageImage,
     Object? pickingAudioStoryId = _unset,
     Object? pickingCoverStoryId = _unset,
+    List<String>? probingDurationStoryIds,
     PublishMode? publishMode,
     DateTime? scheduledAt,
     String? error,
@@ -143,8 +147,8 @@ class PackageCreateState {
           ? this.packageImageBytes
           : packageImageBytes as Uint8List?,
       packagePricePodcoin: packagePricePodcoin ?? this.packagePricePodcoin,
-      packageSoloPricePodcoin:
-          packageSoloPricePodcoin ?? this.packageSoloPricePodcoin,
+      packageSinglePricePodcoin:
+          packageSoloPricePodcoin ?? this.packageSinglePricePodcoin,
       spaces: spaces ?? this.spaces,
       selectedSpace: selectedSpace ?? this.selectedSpace,
       channels: channels ?? this.channels,
@@ -158,6 +162,8 @@ class PackageCreateState {
       pickingCoverStoryId: pickingCoverStoryId == _unset
           ? this.pickingCoverStoryId
           : pickingCoverStoryId as String?,
+      probingDurationStoryIds:
+          probingDurationStoryIds ?? this.probingDurationStoryIds,
       publishMode: publishMode ?? this.publishMode,
       scheduledAt: scheduledAt ?? this.scheduledAt,
       error: error,
@@ -272,6 +278,81 @@ class PackageCreateController extends Notifier<PackageCreateState> {
     }
   }
 
+  Future<void> probeMissingDurations() async {
+    final storyIds = state.stories
+        .where(
+          (story) =>
+              story.audio != null &&
+              story.audio!.duration == Duration.zero &&
+              !state.probingDurationStoryIds.contains(story.id),
+        )
+        .map((story) => story.id)
+        .toList();
+
+    for (final storyId in storyIds) {
+      await probeStoryDuration(storyId);
+    }
+  }
+
+  Future<void> probeStoryDuration(String storyId) async {
+    final story = _findStory(storyId);
+    final audio = story?.audio;
+    if (audio == null ||
+        audio.duration != Duration.zero ||
+        state.probingDurationStoryIds.contains(storyId)) {
+      return;
+    }
+
+    _setDurationProbing(storyId, true);
+
+    var bytes = audio.fileBytes;
+    var fileSize = audio.fileSize;
+    var duration = Duration.zero;
+
+    try {
+      final player = AudioPlayer();
+      try {
+        if (!kIsWeb && _hasRealFilePath(audio)) {
+          await player.setFilePath(audio.path);
+        } else {
+          if (bytes.isEmpty && audio.readStream != null) {
+            bytes = await _readAllBytes(audio.readStream!);
+            fileSize = bytes.length;
+          }
+          if (bytes.isEmpty) return;
+          await player.setUrl(
+            Uri.dataFromBytes(
+              bytes,
+              mimeType: _mimeFromName(audio.fileName),
+            ).toString(),
+          );
+        }
+
+        duration = player.duration ?? Duration.zero;
+        if (duration == Duration.zero) {
+          final streamDuration = await player.durationStream
+              .firstWhere((d) => d != null)
+              .timeout(const Duration(seconds: 3), onTimeout: () => null);
+          duration = streamDuration ?? Duration.zero;
+        }
+      } finally {
+        await player.dispose();
+      }
+    } catch (_) {
+      duration = Duration.zero;
+    } finally {
+      _updateStoryAudio(
+        storyId,
+        audio,
+        bytes: bytes,
+        fileSize: fileSize,
+        duration: duration,
+        clearReadStream: bytes.isNotEmpty && audio.fileBytes.isEmpty,
+      );
+      _setDurationProbing(storyId, false);
+    }
+  }
+
   Future<void> pickStoryCover(String storyId) async {
     if (state.pickingCoverStoryId != null) return;
 
@@ -324,8 +405,82 @@ class PackageCreateController extends Notifier<PackageCreateState> {
     );
   }
 
+  PackageStoryDraft? _findStory(String storyId) {
+    for (final story in state.stories) {
+      if (story.id == storyId) return story;
+    }
+    return null;
+  }
+
+  void _updateStoryAudio(
+    String storyId,
+    UploadedAudio audio, {
+    required Uint8List bytes,
+    required int fileSize,
+    required Duration duration,
+    required bool clearReadStream,
+  }) {
+    _updateStory(
+      storyId,
+      (story) => story.copyWith(
+        audio: UploadedAudio(
+          id: audio.id,
+          name: audio.name,
+          fileName: audio.fileName,
+          fileBytes: bytes,
+          readStream: clearReadStream ? null : audio.readStream,
+          fileSize: fileSize,
+          duration: duration,
+          path: audio.path,
+        ),
+      ),
+    );
+  }
+
+  void _setDurationProbing(String storyId, bool isProbing) {
+    final ids = state.probingDurationStoryIds.toSet();
+    if (isProbing) {
+      ids.add(storyId);
+    } else {
+      ids.remove(storyId);
+    }
+    state = state.copyWith(probingDurationStoryIds: ids.toList());
+  }
+
+  bool _hasRealFilePath(UploadedAudio audio) {
+    return audio.path.isNotEmpty && audio.path != audio.fileName;
+  }
+
+  Future<Uint8List> _readAllBytes(Stream<List<int>> stream) async {
+    final chunks = <int>[];
+    await for (final chunk in stream) {
+      chunks.addAll(chunk);
+    }
+    return Uint8List.fromList(chunks);
+  }
+
   String _genId(String seed) =>
       '${DateTime.now().microsecondsSinceEpoch}_${seed.hashCode}';
+
+  String _mimeFromName(String name) {
+    final ext = name.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'mp3':
+        return 'audio/mpeg';
+      case 'm4a':
+        return 'audio/mp4';
+      case 'aac':
+        return 'audio/aac';
+      case 'wav':
+        return 'audio/wav';
+      case 'flac':
+        return 'audio/flac';
+      case 'ogg':
+        return 'audio/ogg';
+      default:
+        return 'application/octet-stream';
+    }
+  }
 }
 
 final packageCreateControllerProvider =
