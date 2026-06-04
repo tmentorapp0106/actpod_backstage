@@ -12,6 +12,7 @@ import 'package:actpod_studio/features/create_story/pages/single/preview_page.da
 import 'package:actpod_studio/features/create_story/pages/single/settings_page.dart';
 import 'package:actpod_studio/features/create_story/pages/single/upload_page.dart';
 import 'package:actpod_studio/features/create_story/widgets/step_button.dart';
+import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_scaffold.dart';
@@ -41,6 +42,11 @@ class PublishFlowPage extends ConsumerWidget {
           children[current],
 
           const SizedBox(height: 20),
+
+          if (state.isSaving || state.uploadItems.isNotEmpty) ...[
+            _UploadProgressCard(state: state),
+            const SizedBox(height: 20),
+          ],
 
           // 底部導覽列（上一步 / 下一步 / 發布）
           StepButton(stepIndex: current, steps: steps),
@@ -109,6 +115,100 @@ class PublishFlowPage extends ConsumerWidget {
   }
 }
 
+class _UploadProgressCard extends StatelessWidget {
+  final CreateFlowState state;
+
+  const _UploadProgressCard({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = state.uploadItems.length;
+    final completed = state.completedUploadCount;
+    final progress = total == 0 ? null : completed / total;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '發布進度',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            state.currentUploadLabel == null
+                ? '準備上傳中...'
+                : '目前處理: ${state.currentUploadLabel}',
+            style: const TextStyle(color: Colors.black87, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(value: progress, minHeight: 10),
+          const SizedBox(height: 8),
+          Text(
+            '$completed / $total 已完成',
+            style: const TextStyle(color: Colors.black54),
+          ),
+          const SizedBox(height: 16),
+          ...state.uploadItems.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _UploadStatusIcon(status: item.status),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      item.label,
+                      style: TextStyle(
+                        color: item.status == UploadQueueItemStatus.done
+                            ? Colors.black54
+                            : Colors.black87,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UploadStatusIcon extends StatelessWidget {
+  final UploadQueueItemStatus status;
+
+  const _UploadStatusIcon({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    switch (status) {
+      case UploadQueueItemStatus.pending:
+        return const Icon(
+          Icons.radio_button_unchecked_rounded,
+          size: 20,
+          color: Colors.black26,
+        );
+      case UploadQueueItemStatus.active:
+        return const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        );
+      case UploadQueueItemStatus.done:
+        return const Icon(
+          Icons.check_circle_rounded,
+          size: 20,
+          color: Colors.green,
+        );
+      case UploadQueueItemStatus.failed:
+        return const Icon(Icons.error_rounded, size: 20, color: Colors.red);
+    }
+  }
+}
+
 class _PublishHeader extends StatelessWidget {
   final int current;
   final int total;
@@ -151,7 +251,7 @@ class _PublishHeader extends StatelessWidget {
           child: LinearProgressIndicator(
             value: ratio.clamp(0, 1),
             minHeight: 10,
-            backgroundColor: context.color.brand.withOpacity(.2),
+            backgroundColor: context.color.brand.withValues(alpha: .2),
             color: context.color.brand,
           ),
         ),

@@ -9,37 +9,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class StepButton extends ConsumerWidget {
+class StepButton extends ConsumerStatefulWidget {
   final int stepIndex;
   final List<PublishStep> steps;
 
   const StepButton({super.key, required this.stepIndex, required this.steps});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StepButton> createState() => _StepButtonState();
+}
+
+class _StepButtonState extends ConsumerState<StepButton> {
+  @override
+  Widget build(BuildContext context) {
     final flow = ref.watch(createFlowControllerProvider);
     final flowCtrl = ref.read(createFlowControllerProvider.notifier);
     final isSaving = flow.isSaving;
-    final canNext = _canNext(ref, flow, stepIndex);
+    final canNext = _canNext(ref, flow, widget.stepIndex);
 
     return Align(
       alignment: Alignment.centerRight,
       child: StepNavBar(
-        showPrev: stepIndex > 0 && !isSaving,
-        nextLabel: _nextLabel(stepIndex),
-        isLast: stepIndex == steps.length - 1,
+        showPrev: widget.stepIndex > 0 && !isSaving,
+        nextLabel: _nextLabel(widget.stepIndex),
+        isLast: widget.stepIndex == widget.steps.length - 1,
         busy: isSaving,
         disableNext: isSaving || !canNext,
         onPrev: () {
-          if (stepIndex > 0) {
+          if (widget.stepIndex > 0) {
             flowCtrl.back();
             context.go('/publish/${flow.currentPage - 1}');
           }
         },
         onNext: () {
-          if (stepIndex < steps.length - 1) {
+          if (widget.stepIndex < widget.steps.length - 1) {
             if (!canNext) return;
-            flowCtrl.next(steps.length);
+            flowCtrl.next(widget.steps.length);
             context.go('/publish/${flow.currentPage + 1}');
           } else {
             _submit(context, ref);
@@ -85,14 +90,16 @@ class StepButton extends ConsumerWidget {
 
   String _nextLabel(int i) {
     if (i == 0) return '下一步';
-    if (i < steps.length - 2) return '下一步';
-    if (i == steps.length - 2) return '進入預覽畫面';
+    if (i < widget.steps.length - 2) return '下一步';
+    if (i == widget.steps.length - 2) return '進入預覽畫面';
     return '發布';
   }
 
   void _submit(BuildContext context, WidgetRef ref) async {
     final flowCtrl = ref.read(createFlowControllerProvider.notifier);
     final flow = ref.read(createFlowControllerProvider);
+    final packageCtrl = ref.read(packageCreateControllerProvider.notifier);
+    final singleCtrl = ref.read(singleCreateControllerProvider.notifier);
 
     if (flow.flowType == CreateFlowType.package &&
         ref
@@ -105,17 +112,28 @@ class StepButton extends ConsumerWidget {
       return;
     }
 
-    flowCtrl.setSaving(true);
+    if (flow.flowType == CreateFlowType.package) {
+      flowCtrl.beginUploadQueue(
+        _buildPackageUploadQueue(ref.read(packageCreateControllerProvider)),
+      );
+    } else {
+      flowCtrl.beginUploadQueue(
+        _buildSingleUploadQueue(ref.read(singleCreateControllerProvider)),
+      );
+    }
 
     try {
       if (flow.flowType == CreateFlowType.package) {
-        await _submitPackage(ref.read(packageCreateControllerProvider));
-        ref.read(packageCreateControllerProvider.notifier).clear();
+        await _submitPackage(ref, ref.read(packageCreateControllerProvider));
+        if (!mounted) return;
+        packageCtrl.clear();
       } else {
-        await _submitSingle(ref.read(singleCreateControllerProvider));
-        ref.read(singleCreateControllerProvider.notifier).clear();
+        await _submitSingle(ref, ref.read(singleCreateControllerProvider));
+        if (!mounted) return;
+        singleCtrl.clear();
       }
 
+      if (!mounted) return;
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
@@ -130,93 +148,120 @@ class StepButton extends ConsumerWidget {
         ).showSnackBar(SnackBar(content: Text('發布失敗：$e')));
       }
     } finally {
-      flowCtrl.setSaving(false);
-      flowCtrl.clear();
-      if (context.mounted) {
-        GoRouter.of(context).go('/publish/0');
+      if (mounted) {
+        flowCtrl.clearUploadQueue();
+        flowCtrl.clear();
+        if (context.mounted) {
+          GoRouter.of(context).go('/publish/0');
+        }
       }
     }
   }
 
-  Future<void> _submitSingle(SingleCreateState state) async {
-    final uploaded = await _uploadSingleAssets(state);
+  Future<void> _submitSingle(WidgetRef ref, SingleCreateState state) async {
+    final uploaded = await _uploadSingleAssets(ref, state);
     final ids = _selectedSingleIds(state);
 
-    await StoryApi().uploadStory(
-      ids.spaceId,
-      ids.channelId,
-      uploaded.contentUrl,
-      state.title!,
-      state.description!,
-      uploaded.imageUrls,
-      state.audios[0].duration.inMilliseconds,
-      (state.audios[0].duration.inMilliseconds / 2).toInt(),
-      (state.audios[0].duration.inMilliseconds / 2).toInt() + 20 * 1000,
-      "enable",
-      state.pricePodcoin > 0,
-      state.pricePodcoin,
-      state.collaborator?.userId,
-      state.scheduledAt,
+    await _runUploadStep(
+      ref,
+      'single-publish',
+      () => StoryApi().uploadStory(
+        ids.spaceId,
+        ids.channelId,
+        uploaded.contentUrl,
+        state.title!,
+        state.description!,
+        uploaded.imageUrls,
+        state.audios[0].duration.inMilliseconds,
+        (state.audios[0].duration.inMilliseconds / 2).toInt(),
+        (state.audios[0].duration.inMilliseconds / 2).toInt() + 20 * 1000,
+        "enable",
+        state.pricePodcoin > 0,
+        state.pricePodcoin,
+        state.collaborator?.userId,
+        state.scheduledAt,
+      ),
     );
   }
 
-  Future<void> _submitPackage(PackageCreateState state) async {
-    final ids = _selectedPackageIds(state);
+  Future<void> _submitPackage(WidgetRef ref, PackageCreateState state) async {
     final uploadedStories = <_UploadedPackageStory>[];
-    final packageImageResponse = await UploadApi().uploadPackageImage(
-      state.packageImagePath!,
-      state.packageImageBytes!,
+    final ids = _selectedPackageIds(state);
+    final packageImageResponse = await _runUploadStep(
+      ref,
+      'package-image',
+      () => UploadApi().uploadPackageImage(
+        state.packageImagePath!,
+        state.packageImageBytes!,
+      ),
     );
 
-    for (final story in state.stories) {
-      uploadedStories.add(await _uploadPackageStoryAssets(story));
+    for (var i = 0; i < state.stories.length; i++) {
+      uploadedStories.add(
+        await _uploadPackageStoryAssets(ref, state.stories[i], i),
+      );
     }
 
-    final packageResponse = await StoryApi().createPackage(
-      state.packageName!,
-      state.packageDescription!,
-      packageImageResponse.publicUrl,
-      ids.spaceId,
-      ids.channelId,
-      state.packagePricePodcoin,
-      state.packageSinglePricePodcoin,
+    final packageResponse = await _runUploadStep(
+      ref,
+      'package-create',
+      () => StoryApi().createPackage(
+        state.packageName!,
+        state.packageDescription!,
+        packageImageResponse.publicUrl,
+        ids.spaceId,
+        ids.channelId,
+        state.packagePricePodcoin,
+        state.packageSinglePricePodcoin,
+      ),
     );
 
-    for (final uploadedStory in uploadedStories) {
-      await StoryApi().createPackageStory(
-        packageResponse.packageId,
-        uploadedStory.contentUrl,
-        uploadedStory.title,
-        uploadedStory.description,
-        uploadedStory.imageUrls,
-        uploadedStory.duration.inMilliseconds,
-        (uploadedStory.duration.inMilliseconds / 2).toInt(),
-        (uploadedStory.duration.inMilliseconds / 2).toInt() + 20 * 1000,
-        "enable",
-        null,
-        state.scheduledAt,
+    for (var i = 0; i < uploadedStories.length; i++) {
+      final uploadedStory = uploadedStories[i];
+      await _runUploadStep(
+        ref,
+        'package-story-create-$i',
+        () => StoryApi().createPackageStory(
+          packageResponse.packageId,
+          uploadedStory.contentUrl,
+          uploadedStory.title,
+          uploadedStory.description,
+          uploadedStory.imageUrls,
+          uploadedStory.duration.inMilliseconds,
+          (uploadedStory.duration.inMilliseconds / 2).toInt(),
+          (uploadedStory.duration.inMilliseconds / 2).toInt() + 20 * 1000,
+          "enable",
+          null,
+          state.scheduledAt,
+        ),
       );
     }
   }
 
   Future<_UploadedStoryAssets> _uploadSingleAssets(
+    WidgetRef ref,
     SingleCreateState state,
   ) async {
-    final contentResponse = await UploadApi().uploadStoryContent(
-      state.audios[0].fileName,
-      state.audios[0].fileBytes,
-    );
-    final uploadImageFutures = List.generate(
-      state.imageFilePaths?.length ?? 0,
-      (i) => UploadApi().uploadStoryImage(
-        state.imageFilePaths![i],
-        state.imageFilesBytes![i],
+    final contentResponse = await _runUploadStep(
+      ref,
+      'single-audio',
+      () => UploadApi().uploadStoryContent(
+        state.audios[0].fileName,
+        state.audios[0].fileBytes,
       ),
     );
-    final imageResponses = await Future.wait(uploadImageFutures);
-    final imageUrls = imageResponses
-        .map((response) => response.publicUrl)
-        .toList();
+    final imageUrls = <String>[];
+    for (var i = 0; i < (state.imageFilePaths?.length ?? 0); i++) {
+      final imageResponse = await _runUploadStep(
+        ref,
+        'single-image-$i',
+        () => UploadApi().uploadStoryImage(
+          state.imageFilePaths![i],
+          state.imageFilesBytes![i],
+        ),
+      );
+      imageUrls.add(imageResponse.publicUrl);
+    }
 
     return _UploadedStoryAssets(
       contentUrl: contentResponse.publicUrl,
@@ -225,27 +270,34 @@ class StepButton extends ConsumerWidget {
   }
 
   Future<_UploadedPackageStory> _uploadPackageStoryAssets(
+    WidgetRef ref,
     PackageStoryDraft story,
+    int storyIndex,
   ) async {
     final audio = story.audio!;
-    final contentResponse = audio.readStream != null && audio.fileSize > 0
-        ? await UploadApi().uploadStoryContentStream(
-            audio.fileName,
-            audio.readStream!,
-            audio.fileSize,
-          )
-        : await UploadApi().uploadStoryContent(audio.fileName, audio.fileBytes);
-    final uploadImageFutures = List.generate(
-      story.imageFilePaths.length,
-      (i) => UploadApi().uploadStoryImage(
-        story.imageFilePaths[i],
-        story.imageFilesBytes[i],
-      ),
+    final contentResponse = await _runUploadStep(
+      ref,
+      'package-story-audio-$storyIndex',
+      () => audio.readStream != null && audio.fileSize > 0
+          ? UploadApi().uploadStoryContentStream(
+              audio.fileName,
+              audio.readStream!,
+              audio.fileSize,
+            )
+          : UploadApi().uploadStoryContent(audio.fileName, audio.fileBytes),
     );
-    final imageResponses = await Future.wait(uploadImageFutures);
-    final imageUrls = imageResponses
-        .map((response) => response.publicUrl)
-        .toList();
+    final imageUrls = <String>[];
+    for (var i = 0; i < story.imageFilePaths.length; i++) {
+      final imageResponse = await _runUploadStep(
+        ref,
+        'package-story-image-$storyIndex-$i',
+        () => UploadApi().uploadStoryImage(
+          story.imageFilePaths[i],
+          story.imageFilesBytes[i],
+        ),
+      );
+      imageUrls.add(imageResponse.publicUrl);
+    }
 
     return _UploadedPackageStory(
       title: story.title,
@@ -254,6 +306,86 @@ class StepButton extends ConsumerWidget {
       imageUrls: imageUrls,
       duration: audio.duration,
     );
+  }
+
+  Future<T> _runUploadStep<T>(
+    WidgetRef ref,
+    String taskId,
+    Future<T> Function() action,
+  ) async {
+    final flowCtrl = ref.read(createFlowControllerProvider.notifier);
+    flowCtrl.markUploadActive(taskId);
+    try {
+      final result = await action();
+      flowCtrl.markUploadDone(taskId);
+      return result;
+    } catch (_) {
+      flowCtrl.markUploadFailed(taskId);
+      rethrow;
+    }
+  }
+
+  List<UploadQueueItem> _buildSingleUploadQueue(SingleCreateState state) {
+    final items = <UploadQueueItem>[
+      UploadQueueItem(
+        id: 'single-audio',
+        label: '上傳音檔: ${state.audios[0].fileName}',
+      ),
+    ];
+
+    for (var i = 0; i < (state.imageFilePaths?.length ?? 0); i++) {
+      items.add(
+        UploadQueueItem(
+          id: 'single-image-$i',
+          label: '上傳圖片 ${i + 1}: ${state.imageFilePaths![i]}',
+        ),
+      );
+    }
+
+    items.add(
+      const UploadQueueItem(id: 'single-publish', label: '建立 Story 資料'),
+    );
+    return items;
+  }
+
+  List<UploadQueueItem> _buildPackageUploadQueue(PackageCreateState state) {
+    final items = <UploadQueueItem>[
+      UploadQueueItem(
+        id: 'package-image',
+        label: '上傳套裝圖片: ${state.packageImagePath!}',
+      ),
+    ];
+
+    for (var i = 0; i < state.stories.length; i++) {
+      final story = state.stories[i];
+      items.add(
+        UploadQueueItem(
+          id: 'package-story-audio-$i',
+          label: '上傳 Story ${i + 1} 音檔: ${story.audio!.fileName}',
+        ),
+      );
+      for (var j = 0; j < story.imageFilePaths.length; j++) {
+        items.add(
+          UploadQueueItem(
+            id: 'package-story-image-$i-$j',
+            label: '上傳 Story ${i + 1} 圖片 ${j + 1}: ${story.imageFilePaths[j]}',
+          ),
+        );
+      }
+    }
+
+    items.add(const UploadQueueItem(id: 'package-create', label: '建立套裝資料'));
+
+    for (var i = 0; i < state.stories.length; i++) {
+      items.add(
+        UploadQueueItem(
+          id: 'package-story-create-$i',
+          label: '建立 Story ${i + 1} 資料',
+        ),
+      );
+    }
+
+    return items;
   }
 
   _SelectedIds _selectedSingleIds(SingleCreateState state) {

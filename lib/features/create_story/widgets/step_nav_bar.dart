@@ -22,7 +22,6 @@ class StepNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -34,7 +33,7 @@ class StepNavBar extends StatelessWidget {
           ),
         Spacer(),
         FilledButton.icon(
-          onPressed: busy ? null : onNext,
+          onPressed: busy || disableNext ? null : onNext,
           icon: busy
               ? const SizedBox(
                   width: 16,
