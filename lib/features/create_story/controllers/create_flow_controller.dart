@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum CreateFlowType { single, package }
+enum CreateFlowType { single, package, editPackage }
 
 const _unset = Object();
 
@@ -45,7 +45,9 @@ class CreateFlowState {
     this.currentUploadLabel,
   });
 
-  bool get isPackageFlow => flowType == CreateFlowType.package;
+  bool get isPackageFlow =>
+      flowType == CreateFlowType.package ||
+      flowType == CreateFlowType.editPackage;
 
   int get totalSteps => isPackageFlow ? 5 : 5;
 

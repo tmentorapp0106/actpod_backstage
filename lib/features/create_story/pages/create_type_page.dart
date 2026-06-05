@@ -24,7 +24,7 @@ class CreateTypeStep extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '先決定這次要發布單一故事，或建立可包含多集的套裝。',
+              '先決定這次要發布單一故事、建立套裝，或編輯既有套裝。',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
@@ -47,6 +47,13 @@ class CreateTypeStep extends ConsumerWidget {
                   selected: state.flowType == CreateFlowType.package,
                   onTap: () => ctrl.setFlowType(CreateFlowType.package),
                 );
+                final editPackageCard = _FlowTypeCard(
+                  title: '編輯套裝',
+                  description: '選擇已建立的套裝，調整資訊、價格與故事。',
+                  icon: Icons.edit_note_rounded,
+                  selected: state.flowType == CreateFlowType.editPackage,
+                  onTap: () => ctrl.setFlowType(CreateFlowType.editPackage),
+                );
 
                 if (isWide) {
                   return Row(
@@ -55,6 +62,8 @@ class CreateTypeStep extends ConsumerWidget {
                       Expanded(child: singleCard),
                       const SizedBox(width: 16),
                       Expanded(child: packageCard),
+                      const SizedBox(width: 16),
+                      Expanded(child: editPackageCard),
                     ],
                   );
                 }
@@ -64,6 +73,8 @@ class CreateTypeStep extends ConsumerWidget {
                     singleCard,
                     const SizedBox(height: 12),
                     packageCard,
+                    const SizedBox(height: 12),
+                    editPackageCard,
                   ],
                 );
               },

@@ -1,5 +1,7 @@
 import 'package:actpod_studio/api/channel_system_api.dart';
 import 'package:actpod_studio/api/space_system_api.dart';
+import 'package:actpod_studio/api/story_system_api.dart';
+import 'package:actpod_studio/api/response/story_response/package_models.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_shared_models.dart';
 import 'package:actpod_studio/features/create_story/models/channel_model.dart';
 import 'package:actpod_studio/features/create_story/models/space_model.dart';
@@ -111,6 +113,9 @@ class PackageCreateState {
   final String? packageImagePath;
   final Uint8List? packageImageBytes;
   final List<PackagePriceDraft> packagePrices;
+  final List<PremiumPackage> editablePackages;
+  final bool loadingEditablePackages;
+  final String? selectedEditPackageId;
   final List<Space> spaces;
   final String? selectedSpace;
   final List<Channel> channels;
@@ -136,6 +141,9 @@ class PackageCreateState {
       ),
       PackagePriceDraft(id: 'single_default', priceType: '單集購買', lable: '單集價格'),
     ],
+    this.editablePackages = const [],
+    this.loadingEditablePackages = false,
+    this.selectedEditPackageId,
     this.spaces = const [],
     this.selectedSpace,
     this.channels = const [],
@@ -169,6 +177,9 @@ class PackageCreateState {
     Object? packageImagePath = _unset,
     Object? packageImageBytes = _unset,
     List<PackagePriceDraft>? packagePrices,
+    List<PremiumPackage>? editablePackages,
+    bool? loadingEditablePackages,
+    Object? selectedEditPackageId = _unset,
     List<Space>? spaces,
     String? selectedSpace,
     List<Channel>? channels,
@@ -191,6 +202,12 @@ class PackageCreateState {
           ? this.packageImageBytes
           : packageImageBytes as Uint8List?,
       packagePrices: packagePrices ?? this.packagePrices,
+      editablePackages: editablePackages ?? this.editablePackages,
+      loadingEditablePackages:
+          loadingEditablePackages ?? this.loadingEditablePackages,
+      selectedEditPackageId: selectedEditPackageId == _unset
+          ? this.selectedEditPackageId
+          : selectedEditPackageId as String?,
       spaces: spaces ?? this.spaces,
       selectedSpace: selectedSpace ?? this.selectedSpace,
       channels: channels ?? this.channels,
@@ -234,6 +251,33 @@ class PackageCreateController extends Notifier<PackageCreateState> {
       state = state.copyWith(packageDescription: v);
   void setSpace(String? v) => state = state.copyWith(selectedSpace: v);
   void setChannel(String? v) => state = state.copyWith(selectedChannel: v);
+
+  Future<void> loadEditablePackages(String userId) async {
+    if (state.loadingEditablePackages) return;
+
+    state = state.copyWith(loadingEditablePackages: true);
+    try {
+      final response = await StoryApi().getUserPackages(userId);
+      if(response.code != "0000") {
+        print(response.message);
+      }
+      state = state.copyWith(
+        editablePackages: response.packages,
+        selectedEditPackageId:
+            response.packages.any(
+              (package) => package.packageId == state.selectedEditPackageId,
+            )
+            ? state.selectedEditPackageId
+            : null,
+      );
+    } finally {
+      state = state.copyWith(loadingEditablePackages: false);
+    }
+  }
+
+  void setEditPackage(String packageId) {
+    state = state.copyWith(selectedEditPackageId: packageId);
+  }
 
   void addPackagePrice() {
     state = state.copyWith(

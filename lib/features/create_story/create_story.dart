@@ -3,6 +3,7 @@ import 'package:actpod_studio/app/theme/theme.dart';
 import 'package:actpod_studio/features/create_story/const.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_flow_controller.dart';
 import 'package:actpod_studio/features/create_story/pages/create_type_page.dart';
+import 'package:actpod_studio/features/create_story/pages/package/edit_package_select_page.dart';
 import 'package:actpod_studio/features/create_story/pages/package/package_preview_page.dart';
 import 'package:actpod_studio/features/create_story/pages/package/package_setup_page.dart';
 import 'package:actpod_studio/features/create_story/pages/package/package_stories_page.dart';
@@ -55,6 +56,15 @@ class PublishFlowPage extends ConsumerWidget {
   }
 
   List<PublishStep> _stepsFor(CreateFlowType? flowType) {
+    if (flowType == CreateFlowType.editPackage) {
+      return const [
+        PublishStep.type,
+        PublishStep.package,
+        PublishStep.detail,
+        PublishStep.settings,
+        PublishStep.preview,
+      ];
+    }
     if (flowType == CreateFlowType.package) {
       return const [
         PublishStep.type,
@@ -73,6 +83,9 @@ class PublishFlowPage extends ConsumerWidget {
   }
 
   List<String> _labelsFor(CreateFlowType? flowType) {
+    if (flowType == CreateFlowType.editPackage) {
+      return const ['建立類型', '選擇套裝', '套裝資訊', '套裝故事', '預覽畫面'];
+    }
     if (flowType == CreateFlowType.package) {
       return const ['建立類型', '套裝資訊', '套裝故事', '預覽畫面'];
     }
@@ -80,6 +93,15 @@ class PublishFlowPage extends ConsumerWidget {
   }
 
   List<Widget> _childrenFor(CreateFlowType? flowType) {
+    if (flowType == CreateFlowType.editPackage) {
+      return const [
+        CreateTypeStep(),
+        EditPackageSelectStep(),
+        PackageSetupStep(),
+        PackageStoriesStep(),
+        PackagePreviewStep(),
+      ];
+    }
     if (flowType == CreateFlowType.package) {
       return const [
         CreateTypeStep(),

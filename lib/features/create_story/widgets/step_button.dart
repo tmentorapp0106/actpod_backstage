@@ -73,6 +73,23 @@ class _StepButtonState extends ConsumerState<StepButton> {
   bool _canNext(WidgetRef ref, CreateFlowState flow, int stepIndex) {
     if (stepIndex == 0) return flow.flowType != null;
 
+    if (flow.flowType == CreateFlowType.editPackage) {
+      final packageState = ref.watch(packageCreateControllerProvider);
+      switch (stepIndex) {
+        case 1:
+          return packageState.selectedEditPackageId != null &&
+              packageState.selectedEditPackageId!.isNotEmpty;
+        case 2:
+          return packageState.hasValidPackageInfo;
+        case 3:
+          return packageState.hasValidStories;
+        case 4:
+          return packageState.probingDurationStoryIds.isEmpty;
+        default:
+          return false;
+      }
+    }
+
     if (flow.flowType == CreateFlowType.package) {
       final packageState = ref.watch(packageCreateControllerProvider);
       switch (stepIndex) {
@@ -114,6 +131,13 @@ class _StepButtonState extends ConsumerState<StepButton> {
     final flow = ref.read(createFlowControllerProvider);
     final packageCtrl = ref.read(packageCreateControllerProvider.notifier);
     final singleCtrl = ref.read(singleCreateControllerProvider.notifier);
+
+    if (flow.flowType == CreateFlowType.editPackage) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('編輯套裝送出流程尚未完成')));
+      return;
+    }
 
     if (flow.flowType == CreateFlowType.package &&
         ref
