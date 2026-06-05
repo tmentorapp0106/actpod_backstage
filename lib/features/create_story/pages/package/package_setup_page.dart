@@ -96,38 +96,7 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
               },
             ),
             const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final packagePriceField = _PriceField(
-                  label: '套裝價格',
-                  value: state.packagePricePodcoin,
-                  onChanged: ctrl.setPackagePrice,
-                );
-                final soloPriceField = _PriceField(
-                  label: '單賣價格',
-                  value: state.packageSinglePricePodcoin,
-                  onChanged: ctrl.setPackageSoloPrice,
-                );
-
-                if (constraints.maxWidth >= 720) {
-                  return Row(
-                    children: [
-                      Expanded(child: packagePriceField),
-                      const SizedBox(width: 16),
-                      Expanded(child: soloPriceField),
-                    ],
-                  );
-                }
-
-                return Column(
-                  children: [
-                    packagePriceField,
-                    const SizedBox(height: 12),
-                    soloPriceField,
-                  ],
-                );
-              },
-            ),
+            _PackagePricesEditor(state: state, ctrl: ctrl),
           ],
         ),
       ),
@@ -202,7 +171,7 @@ class _SpaceField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: state.selectedSpace,
+      initialValue: state.selectedSpace,
       items: state.spaces
           .map(
             (space) => DropdownMenuItem<String>(
@@ -230,7 +199,7 @@ class _ChannelField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: state.selectedChannel,
+      initialValue: state.selectedChannel,
       items: state.channels
           .map(
             (channel) => DropdownMenuItem<String>(
@@ -249,47 +218,193 @@ class _ChannelField extends StatelessWidget {
   }
 }
 
-class _PriceField extends StatefulWidget {
+class _PackagePricesEditor extends StatelessWidget {
+  final PackageCreateState state;
+  final PackageCreateController ctrl;
+
+  const _PackagePricesEditor({required this.state, required this.ctrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                '價格設定',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: ctrl.addPackagePrice,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('新增價格'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...state.packagePrices.map(
+          (price) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _PackagePriceRow(
+              price: price,
+              canRemove: state.packagePrices.length > 1,
+              ctrl: ctrl,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PackagePriceRow extends StatelessWidget {
+  final PackagePriceDraft price;
+  final bool canRemove;
+  final PackageCreateController ctrl;
+
+  const _PackagePriceRow({
+    required this.price,
+    required this.canRemove,
+    required this.ctrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final fields = [
+            DropdownButtonFormField<String>(
+              initialValue: price.priceType,
+              items: const [
+                DropdownMenuItem(value: '整套購買', child: Text('整套購買')),
+                DropdownMenuItem(value: '單集購買', child: Text('單集購買')),
+              ],
+              onChanged: (value) {
+                if (value != null) ctrl.setPackagePriceType(price.id, value);
+              },
+              decoration: const InputDecoration(
+                labelText: '購買類型',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            TextFormField(
+              key: ValueKey('${price.id}_lable'),
+              initialValue: price.lable,
+              onChanged: (value) => ctrl.setPackagePriceLable(price.id, value),
+              decoration: const InputDecoration(
+                labelText: 'Price 名稱',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            _NumberField(
+              key: ValueKey('${price.id}_podcoins'),
+              label: 'Podcoins',
+              value: price.podcoins,
+              onChanged: (value) =>
+                  ctrl.setPackagePricePodcoins(price.id, value),
+            ),
+            _NumberField(
+              key: ValueKey('${price.id}_twd'),
+              label: 'TWD',
+              value: price.twd,
+              onChanged: (value) => ctrl.setPackagePriceTwd(price.id, value),
+            ),
+          ];
+
+          if (constraints.maxWidth >= 920) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < fields.length; i++) ...[
+                  Expanded(child: fields[i]),
+                  if (i != fields.length - 1) const SizedBox(width: 12),
+                ],
+                const SizedBox(width: 8),
+                _PriceActions(price: price, canRemove: canRemove, ctrl: ctrl),
+              ],
+            );
+          }
+
+          return Column(
+            children: [
+              for (var i = 0; i < fields.length; i++) ...[
+                fields[i],
+                const SizedBox(height: 12),
+              ],
+              _PriceActions(price: price, canRemove: canRemove, ctrl: ctrl),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PriceActions extends StatelessWidget {
+  final PackagePriceDraft price;
+  final bool canRemove;
+  final PackageCreateController ctrl;
+
+  const _PriceActions({
+    required this.price,
+    required this.canRemove,
+    required this.ctrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('啟用'),
+        Switch(
+          value: price.isActive,
+          onChanged: (value) => ctrl.setPackagePriceActive(price.id, value),
+        ),
+        IconButton(
+          tooltip: '刪除價格',
+          onPressed: canRemove ? () => ctrl.removePackagePrice(price.id) : null,
+          icon: const Icon(Icons.delete_outline_rounded),
+        ),
+      ],
+    );
+  }
+}
+
+class _NumberField extends StatelessWidget {
   final String label;
   final int value;
   final ValueChanged<int> onChanged;
 
-  const _PriceField({
+  const _NumberField({
+    super.key,
     required this.label,
     required this.value,
     required this.onChanged,
   });
 
   @override
-  State<_PriceField> createState() => _PriceFieldState();
-}
-
-class _PriceFieldState extends State<_PriceField> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.value.toString());
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return TextFormField(
-      controller: _controller,
+      initialValue: value.toString(),
       keyboardType: TextInputType.number,
       onChanged: (v) {
         final digits = v.replaceAll(RegExp(r'[^0-9]'), '');
-        widget.onChanged(int.tryParse(digits) ?? 0);
+        onChanged(int.tryParse(digits) ?? 0);
       },
       decoration: InputDecoration(
-        labelText: '${widget.label} (Podcoin)',
+        labelText: label,
         border: const OutlineInputBorder(),
         isDense: true,
       ),

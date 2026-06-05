@@ -11,6 +11,7 @@ import 'package:actpod_studio/features/create_story/controllers/create_flow_cont
 import 'package:actpod_studio/features/create_story/controllers/package_create_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_shared_models.dart';
 import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
 import 'package:actpod_studio/features/create_story/widgets/step_nav_bar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -150,6 +151,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
         await _submitPackage(
           flowCtrl,
           ref.read(packageCreateControllerProvider),
+          ref.read(userControllerProvider)?.userId ?? '',
         );
         if (!mounted) return;
         packageCtrl.clear();
@@ -216,6 +218,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
   Future<void> _submitPackage(
     CreateFlowController flowCtrl,
     PackageCreateState state,
+    String userId,
   ) async {
     final uploadedStories = <_UploadedPackageStory>[];
     final ids = _selectedPackageIds(state);
@@ -238,13 +241,13 @@ class _StepButtonState extends ConsumerState<StepButton> {
       flowCtrl,
       'package-create',
       () => _createPackage(
+        userId,
         state.packageName!,
         state.packageDescription!,
         packageImageResponse.publicUrl,
         ids.spaceId,
         ids.channelId,
-        state.packagePricePodcoin,
-        state.packageSinglePricePodcoin,
+        state.packagePrices,
       ),
     );
 
@@ -721,23 +724,23 @@ class _StepButtonState extends ConsumerState<StepButton> {
   }
 
   Future<CreatePackageResponse> _createPackage(
+    String userId,
     String packageName,
     String packageDescription,
     String packageImageUrl,
     String spaceId,
     String channelId,
-    int packagePrice,
-    int soloPrice,
+    List<PackagePriceDraft> packagePrices,
   ) async {
     if (!_useMockUpload) {
       return StoryApi().createPackage(
+        userId,
         packageName,
         packageDescription,
         packageImageUrl,
         spaceId,
         channelId,
-        packagePrice,
-        soloPrice,
+        packagePrices.map((price) => price.toJson()).toList(),
       );
     }
     await Future.delayed(const Duration(milliseconds: 1200));

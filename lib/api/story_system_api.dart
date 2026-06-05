@@ -42,22 +42,22 @@ class StoryApi {
   }
 
   Future<CreatePackageResponse> createPackage(
+    String userId,
     String packageName,
     String packageDescription,
     String packageImageUrl,
     String spaceId,
     String channelId,
-    int packagePrice,
-    int soloPrice,
+    List<Map<String, dynamic>> packagePrices,
   ) async {
     var data = {
+      "userId": userId,
       "packageName": packageName,
       "packageDescription": packageDescription,
       "packageImageUrl": packageImageUrl,
       "spaceId": spaceId,
       "channelId": channelId,
-      "packagePrice": packagePrice,
-      "soloPrice": soloPrice,
+      "packagePrices": packagePrices,
     };
 
     final response = await DioClient.handelPostWithToken(

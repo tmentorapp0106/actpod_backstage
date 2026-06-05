@@ -11,6 +11,54 @@ import 'package:just_audio/just_audio.dart';
 const _unset = Object();
 
 @immutable
+class PackagePriceDraft {
+  final String id;
+  final String priceType;
+  final String lable;
+  final int podcoins;
+  final int twd;
+  final bool isActive;
+
+  const PackagePriceDraft({
+    required this.id,
+    required this.priceType,
+    required this.lable,
+    this.podcoins = 0,
+    this.twd = 0,
+    this.isActive = true,
+  });
+
+  bool get isComplete => priceType.isNotEmpty && lable.trim().isNotEmpty;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'priceType': priceType,
+      'lable': lable,
+      'podcoins': podcoins,
+      'twd': twd,
+      'isActive': isActive,
+    };
+  }
+
+  PackagePriceDraft copyWith({
+    String? priceType,
+    String? lable,
+    int? podcoins,
+    int? twd,
+    bool? isActive,
+  }) {
+    return PackagePriceDraft(
+      id: id,
+      priceType: priceType ?? this.priceType,
+      lable: lable ?? this.lable,
+      podcoins: podcoins ?? this.podcoins,
+      twd: twd ?? this.twd,
+      isActive: isActive ?? this.isActive,
+    );
+  }
+}
+
+@immutable
 class PackageStoryDraft {
   final String id;
   final String title;
@@ -62,8 +110,7 @@ class PackageCreateState {
   final String? packageDescription;
   final String? packageImagePath;
   final Uint8List? packageImageBytes;
-  final int packagePricePodcoin;
-  final int packageSinglePricePodcoin;
+  final List<PackagePriceDraft> packagePrices;
   final List<Space> spaces;
   final String? selectedSpace;
   final List<Channel> channels;
@@ -81,8 +128,14 @@ class PackageCreateState {
     this.packageDescription,
     this.packageImagePath,
     this.packageImageBytes,
-    this.packagePricePodcoin = 0,
-    this.packageSinglePricePodcoin = 0,
+    this.packagePrices = const [
+      PackagePriceDraft(
+        id: 'package_default',
+        priceType: '整套購買',
+        lable: '整套價格',
+      ),
+      PackagePriceDraft(id: 'single_default', priceType: '單集購買', lable: '單集價格'),
+    ],
     this.spaces = const [],
     this.selectedSpace,
     this.channels = const [],
@@ -102,8 +155,8 @@ class PackageCreateState {
         packageImageBytes != null &&
         (selectedSpace != null && selectedSpace!.isNotEmpty) &&
         (selectedChannel != null && selectedChannel!.isNotEmpty) &&
-        packagePricePodcoin >= 0 &&
-        packageSinglePricePodcoin >= 0;
+        packagePrices.isNotEmpty &&
+        packagePrices.every((price) => price.isComplete);
   }
 
   bool get hasValidStories {
@@ -115,8 +168,7 @@ class PackageCreateState {
     String? packageDescription,
     Object? packageImagePath = _unset,
     Object? packageImageBytes = _unset,
-    int? packagePricePodcoin,
-    int? packageSoloPricePodcoin,
+    List<PackagePriceDraft>? packagePrices,
     List<Space>? spaces,
     String? selectedSpace,
     List<Channel>? channels,
@@ -138,9 +190,7 @@ class PackageCreateState {
       packageImageBytes: packageImageBytes == _unset
           ? this.packageImageBytes
           : packageImageBytes as Uint8List?,
-      packagePricePodcoin: packagePricePodcoin ?? this.packagePricePodcoin,
-      packageSinglePricePodcoin:
-          packageSoloPricePodcoin ?? packageSinglePricePodcoin,
+      packagePrices: packagePrices ?? this.packagePrices,
       spaces: spaces ?? this.spaces,
       selectedSpace: selectedSpace ?? this.selectedSpace,
       channels: channels ?? this.channels,
@@ -182,12 +232,49 @@ class PackageCreateController extends Notifier<PackageCreateState> {
   void setPackageName(String v) => state = state.copyWith(packageName: v);
   void setPackageDescription(String v) =>
       state = state.copyWith(packageDescription: v);
-  void setPackagePrice(int podcoin) =>
-      state = state.copyWith(packagePricePodcoin: podcoin);
-  void setPackageSoloPrice(int podcoin) =>
-      state = state.copyWith(packageSoloPricePodcoin: podcoin);
   void setSpace(String? v) => state = state.copyWith(selectedSpace: v);
   void setChannel(String? v) => state = state.copyWith(selectedChannel: v);
+
+  void addPackagePrice() {
+    state = state.copyWith(
+      packagePrices: [
+        ...state.packagePrices,
+        PackagePriceDraft(id: _genId('price'), priceType: '整套購買', lable: ''),
+      ],
+    );
+  }
+
+  void removePackagePrice(String priceId) {
+    if (state.packagePrices.length <= 1) return;
+    state = state.copyWith(
+      packagePrices: state.packagePrices
+          .where((price) => price.id != priceId)
+          .toList(),
+    );
+  }
+
+  void setPackagePriceType(String priceId, String priceType) {
+    _updatePackagePrice(
+      priceId,
+      (price) => price.copyWith(priceType: priceType),
+    );
+  }
+
+  void setPackagePriceLable(String priceId, String lable) {
+    _updatePackagePrice(priceId, (price) => price.copyWith(lable: lable));
+  }
+
+  void setPackagePricePodcoins(String priceId, int podcoins) {
+    _updatePackagePrice(priceId, (price) => price.copyWith(podcoins: podcoins));
+  }
+
+  void setPackagePriceTwd(String priceId, int twd) {
+    _updatePackagePrice(priceId, (price) => price.copyWith(twd: twd));
+  }
+
+  void setPackagePriceActive(String priceId, bool isActive) {
+    _updatePackagePrice(priceId, (price) => price.copyWith(isActive: isActive));
+  }
 
   Future<void> pickPackageImage() async {
     if (state.pickingPackageImage) return;
@@ -390,6 +477,18 @@ class PackageCreateController extends Notifier<PackageCreateState> {
       stories: [
         for (final story in state.stories)
           if (story.id == storyId) update(story) else story,
+      ],
+    );
+  }
+
+  void _updatePackagePrice(
+    String priceId,
+    PackagePriceDraft Function(PackagePriceDraft price) update,
+  ) {
+    state = state.copyWith(
+      packagePrices: [
+        for (final price in state.packagePrices)
+          if (price.id == priceId) update(price) else price,
       ],
     );
   }

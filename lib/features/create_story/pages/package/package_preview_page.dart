@@ -45,13 +45,14 @@ class _PackagePreviewStepState extends ConsumerState<PackagePreviewStep> {
                   label: 'Channel',
                   value: state.selectedChannel ?? '',
                 ),
-                _SummaryRow(
-                  label: '套裝價格',
-                  value: '${state.packagePricePodcoin} Podcoin',
-                ),
-                _SummaryRow(
-                  label: '單賣價格',
-                  value: '${state.packageSinglePricePodcoin} Podcoin',
+                const SizedBox(height: 4),
+                const Text('價格', style: TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                ...state.packagePrices.map(
+                  (price) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _PricePreviewItem(price: price),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -90,6 +91,39 @@ class _PackagePreviewStepState extends ConsumerState<PackagePreviewStep> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PricePreviewItem extends StatelessWidget {
+  final PackagePriceDraft price;
+
+  const _PricePreviewItem({required this.price});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '${price.lable} / ${price.priceType}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Text('${price.podcoins} Podcoins / NT\$${price.twd}'),
+          const SizedBox(width: 12),
+          Chip(
+            label: Text(price.isActive ? '啟用' : '停用'),
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
     );
   }
 }
