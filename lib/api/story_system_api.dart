@@ -77,6 +77,7 @@ class StoryApi {
     int previewStartFrom,
     int previewEndAt,
     String voiceMessageStatus,
+    String packageNote,
     String? collaboratorId,
     DateTime? releaseTime,
   ) async {
@@ -91,6 +92,7 @@ class StoryApi {
       "previewEndAt": previewEndAt,
       "voiceMessageStatus": voiceMessageStatus,
       "collaboratorId": collaboratorId,
+      "packageNote": packageNote,
       "releaseTime": releaseTime?.toUtc().toIso8601String(),
     };
 

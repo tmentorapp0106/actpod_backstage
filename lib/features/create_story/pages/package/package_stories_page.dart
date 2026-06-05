@@ -91,6 +91,7 @@ class _PackageStoryEditor extends ConsumerStatefulWidget {
 class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
+  late final TextEditingController _packageNoteController;
 
   @override
   void initState() {
@@ -98,6 +99,9 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
     _titleController = TextEditingController(text: widget.story.title);
     _descriptionController = TextEditingController(
       text: widget.story.description,
+    );
+    _packageNoteController = TextEditingController(
+      text: widget.story.packageNote,
     );
   }
 
@@ -107,6 +111,7 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
     if (oldWidget.story.id != widget.story.id) {
       _titleController.text = widget.story.title;
       _descriptionController.text = widget.story.description;
+      _packageNoteController.text = widget.story.packageNote;
     }
   }
 
@@ -114,6 +119,7 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _packageNoteController.dispose();
     super.dispose();
   }
 
@@ -174,6 +180,18 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
               ),
             ),
             const SizedBox(height: 12),
+            TextFormField(
+              controller: _packageNoteController,
+              onChanged: (value) => ctrl.setStoryPackageNote(story.id, value),
+              maxLines: 3,
+              maxLength: 800,
+              decoration: const InputDecoration(
+                labelText: 'Package Note',
+                border: OutlineInputBorder(),
+                alignLabelWithHint: true,
+              ),
+            ),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 12,
               runSpacing: 12,
@@ -184,7 +202,7 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
                       ? () => ctrl.pickStoryAudio(story.id)
                       : null,
                   icon: const Icon(Icons.audio_file_rounded),
-                  label: Text(story.audio == null ? '上傳音檔' : '更換音檔'),
+                  label: Text(story.audio == null ? '上傳音檔（選填）' : '更換音檔'),
                 ),
                 if (isPickingAudio) const _InlineLoading(),
                 if (story.audio != null)
@@ -193,6 +211,12 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
                     label: story.audio!.duration == Duration.zero
                         ? story.audio!.fileName
                         : '${story.audio!.fileName} ・ ${_fmtDuration(story.audio!.duration)}',
+                  ),
+                if (story.audio != null)
+                  IconButton.outlined(
+                    tooltip: '移除音檔',
+                    onPressed: () => ctrl.clearStoryAudio(story.id),
+                    icon: const Icon(Icons.close_rounded),
                   ),
                 OutlinedButton.icon(
                   onPressed: canPickCover

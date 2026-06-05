@@ -15,6 +15,7 @@ class PackageStoryDraft {
   final String id;
   final String title;
   final String description;
+  final String packageNote;
   final UploadedAudio? audio;
   final List<String> imageFilePaths;
   final List<Uint8List> imageFilesBytes;
@@ -23,6 +24,7 @@ class PackageStoryDraft {
     required this.id,
     this.title = '',
     this.description = '',
+    this.packageNote = '',
     this.audio,
     this.imageFilePaths = const [],
     this.imageFilesBytes = const [],
@@ -31,14 +33,14 @@ class PackageStoryDraft {
   bool get isComplete {
     return title.trim().isNotEmpty &&
         description.trim().isNotEmpty &&
-        audio != null &&
         imageFilesBytes.isNotEmpty;
   }
 
   PackageStoryDraft copyWith({
     String? title,
     String? description,
-    UploadedAudio? audio,
+    String? packageNote,
+    Object? audio = _unset,
     List<String>? imageFilePaths,
     List<Uint8List>? imageFilesBytes,
   }) {
@@ -46,7 +48,8 @@ class PackageStoryDraft {
       id: id,
       title: title ?? this.title,
       description: description ?? this.description,
-      audio: audio ?? this.audio,
+      packageNote: packageNote ?? this.packageNote,
+      audio: audio == _unset ? this.audio : audio as UploadedAudio?,
       imageFilePaths: imageFilePaths ?? this.imageFilePaths,
       imageFilesBytes: imageFilesBytes ?? this.imageFilesBytes,
     );
@@ -148,7 +151,7 @@ class PackageCreateState {
           : packageImageBytes as Uint8List?,
       packagePricePodcoin: packagePricePodcoin ?? this.packagePricePodcoin,
       packageSinglePricePodcoin:
-          packageSoloPricePodcoin ?? this.packageSinglePricePodcoin,
+          packageSoloPricePodcoin ?? packageSinglePricePodcoin,
       spaces: spaces ?? this.spaces,
       selectedSpace: selectedSpace ?? this.selectedSpace,
       channels: channels ?? this.channels,
@@ -244,6 +247,15 @@ class PackageCreateController extends Notifier<PackageCreateState> {
 
   void setStoryDescription(String storyId, String description) {
     _updateStory(storyId, (story) => story.copyWith(description: description));
+  }
+
+  void setStoryPackageNote(String storyId, String packageNote) {
+    _updateStory(storyId, (story) => story.copyWith(packageNote: packageNote));
+  }
+
+  void clearStoryAudio(String storyId) {
+    _updateStory(storyId, (story) => story.copyWith(audio: null));
+    _setDurationProbing(storyId, false);
   }
 
   Future<void> pickStoryAudio(String storyId) async {

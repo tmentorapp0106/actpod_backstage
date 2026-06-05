@@ -138,6 +138,15 @@ class _StoryPreviewItem extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: Colors.black54, height: 1.4),
                 ),
+                if (story.packageNote.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    story.packageNote,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.red, height: 1.4),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 12,

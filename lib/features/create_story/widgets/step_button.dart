@@ -262,9 +262,10 @@ class _StepButtonState extends ConsumerState<StepButton> {
           uploadedStory.description,
           uploadedStory.imageUrls,
           uploadedStory.duration.inMilliseconds,
-          (uploadedStory.duration.inMilliseconds / 2).toInt(),
-          (uploadedStory.duration.inMilliseconds / 2).toInt() + 20 * 1000,
+          _previewStart(uploadedStory.duration),
+          _previewEnd(uploadedStory.duration),
           "enable",
+          uploadedStory.packageNote,
           null,
           state.scheduledAt,
         ),
@@ -317,18 +318,25 @@ class _StepButtonState extends ConsumerState<StepButton> {
     PackageStoryDraft story,
     int storyIndex,
   ) async {
-    final audio = story.audio!;
-    final contentResponse = await _runUploadStep(
-      flowCtrl,
-      'package-story-audio-$storyIndex',
-      () => audio.readStream != null && audio.fileSize > 0
-          ? _uploadStoryContentStream(
-              audio.fileName,
-              audio.readStream!,
-              audio.fileSize,
-            )
-          : _uploadStoryContent(audio.fileName, audio.fileBytes),
-    );
+    var contentUrl = '';
+    var duration = Duration.zero;
+    final audio = story.audio;
+    if (audio != null) {
+      final contentResponse = await _runUploadStep(
+        flowCtrl,
+        'package-story-audio-$storyIndex',
+        () => audio.readStream != null && audio.fileSize > 0
+            ? _uploadStoryContentStream(
+                audio.fileName,
+                audio.readStream!,
+                audio.fileSize,
+              )
+            : _uploadStoryContent(audio.fileName, audio.fileBytes),
+      );
+      contentUrl = contentResponse.publicUrl;
+      duration = audio.duration;
+    }
+
     final imageUrls = <String>[];
     for (var i = 0; i < story.imageFilePaths.length; i++) {
       final imageResponse = await _runUploadStep(
@@ -345,9 +353,10 @@ class _StepButtonState extends ConsumerState<StepButton> {
     return _UploadedPackageStory(
       title: story.title,
       description: story.description,
-      contentUrl: contentResponse.publicUrl,
+      packageNote: story.packageNote,
+      contentUrl: contentUrl,
       imageUrls: imageUrls,
-      duration: audio.duration,
+      duration: duration,
     );
   }
 
@@ -401,12 +410,14 @@ class _StepButtonState extends ConsumerState<StepButton> {
 
     for (var i = 0; i < state.stories.length; i++) {
       final story = state.stories[i];
-      items.add(
-        UploadQueueItem(
-          id: 'package-story-audio-$i',
-          label: '上傳 Story ${i + 1} 音檔: ${story.audio!.fileName}',
-        ),
-      );
+      if (story.audio != null) {
+        items.add(
+          UploadQueueItem(
+            id: 'package-story-audio-$i',
+            label: '上傳 Story ${i + 1} 音檔: ${story.audio!.fileName}',
+          ),
+        );
+      }
       for (var j = 0; j < story.imageFilePaths.length; j++) {
         items.add(
           UploadQueueItem(
@@ -453,6 +464,16 @@ class _StepButtonState extends ConsumerState<StepButton> {
         .first
         .channelId;
     return _SelectedIds(spaceId: spaceId, channelId: channelId);
+  }
+
+  int _previewStart(Duration duration) {
+    if (duration == Duration.zero) return 0;
+    return (duration.inMilliseconds / 2).toInt();
+  }
+
+  int _previewEnd(Duration duration) {
+    if (duration == Duration.zero) return 0;
+    return _previewStart(duration) + 20 * 1000;
   }
 
   Future<_PreparedUploadAudio> _prepareAudioForUpload(
@@ -740,6 +761,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
     int previewStartFrom,
     int previewEndAt,
     String voiceMessageStatus,
+    String packageNote,
     String? collaboratorId,
     DateTime? releaseTime,
   ) async {
@@ -754,6 +776,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
         previewStartFrom,
         previewEndAt,
         voiceMessageStatus,
+        packageNote,
         collaboratorId,
         releaseTime,
       );
@@ -805,6 +828,7 @@ class _PreparedUploadAudio {
 class _UploadedPackageStory {
   final String title;
   final String description;
+  final String packageNote;
   final String contentUrl;
   final List<String> imageUrls;
   final Duration duration;
@@ -812,6 +836,7 @@ class _UploadedPackageStory {
   const _UploadedPackageStory({
     required this.title,
     required this.description,
+    required this.packageNote,
     required this.contentUrl,
     required this.imageUrls,
     required this.duration,
