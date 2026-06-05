@@ -1,5 +1,6 @@
 import 'package:actpod_studio/api/response/story_response/create_package.dart';
 import 'package:actpod_studio/api/response/story_response/create_package_story.dart';
+import 'package:actpod_studio/api/response/story_response/package_models.dart';
 import 'package:actpod_studio/api/response/story_response/upload_story.dart';
 import 'package:actpod_studio/api/response/upload_response/upload_package_image.dart';
 import 'package:actpod_studio/api/response/upload_response/upload_story_content.dart';
@@ -740,7 +741,18 @@ class _StepButtonState extends ConsumerState<StepButton> {
         packageImageUrl,
         spaceId,
         channelId,
-        packagePrices.map((price) => price.toJson()).toList(),
+        packagePrices
+            .map(
+              (price) => PackagePrice(
+                packagePriceId: '',
+                priceType: price.priceType,
+                lable: price.lable,
+                podcoins: price.podcoins,
+                twd: price.twd,
+                isActive: price.isActive,
+              ),
+            )
+            .toList(),
       );
     }
     await Future.delayed(const Duration(milliseconds: 1200));

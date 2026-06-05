@@ -25,6 +25,17 @@ class PackagePrice {
       isActive: _bool(json['isActive']),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (packagePriceId.isNotEmpty) 'packagePriceId': packagePriceId,
+      'priceType': priceType,
+      'lable': lable,
+      'podcoins': podcoins,
+      'twd': twd,
+      'isActive': isActive,
+    };
+  }
 }
 
 class PackageInfo {
