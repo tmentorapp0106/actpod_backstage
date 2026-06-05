@@ -79,8 +79,6 @@ class _StepButtonState extends ConsumerState<StepButton> {
         case 2:
           return packageState.hasValidStories;
         case 3:
-          return packageState.hasValidSettings;
-        case 4:
           return packageState.probingDurationStoryIds.isEmpty;
         default:
           return false;
@@ -267,7 +265,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
           "enable",
           uploadedStory.packageNote,
           null,
-          state.scheduledAt,
+          null,
         ),
       );
     }

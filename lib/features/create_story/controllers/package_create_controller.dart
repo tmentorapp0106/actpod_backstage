@@ -74,8 +74,6 @@ class PackageCreateState {
   final String? pickingAudioStoryId;
   final String? pickingCoverStoryId;
   final List<String> probingDurationStoryIds;
-  final PublishMode publishMode;
-  final DateTime? scheduledAt;
   final String? error;
 
   const PackageCreateState({
@@ -95,8 +93,6 @@ class PackageCreateState {
     this.pickingAudioStoryId,
     this.pickingCoverStoryId,
     this.probingDurationStoryIds = const [],
-    this.publishMode = PublishMode.now,
-    this.scheduledAt,
     this.error,
   });
 
@@ -112,11 +108,6 @@ class PackageCreateState {
 
   bool get hasValidStories {
     return stories.isNotEmpty && stories.every((story) => story.isComplete);
-  }
-
-  bool get hasValidSettings {
-    if (publishMode == PublishMode.schedule) return scheduledAt != null;
-    return true;
   }
 
   PackageCreateState copyWith({
@@ -136,8 +127,6 @@ class PackageCreateState {
     Object? pickingAudioStoryId = _unset,
     Object? pickingCoverStoryId = _unset,
     List<String>? probingDurationStoryIds,
-    PublishMode? publishMode,
-    DateTime? scheduledAt,
     String? error,
   }) {
     return PackageCreateState(
@@ -167,8 +156,6 @@ class PackageCreateState {
           : pickingCoverStoryId as String?,
       probingDurationStoryIds:
           probingDurationStoryIds ?? this.probingDurationStoryIds,
-      publishMode: publishMode ?? this.publishMode,
-      scheduledAt: scheduledAt ?? this.scheduledAt,
       error: error,
     );
   }
@@ -394,16 +381,6 @@ class PackageCreateController extends Notifier<PackageCreateState> {
       state = state.copyWith(pickingCoverStoryId: null);
     }
   }
-
-  void setPublishMode(PublishMode mode) {
-    if (mode == PublishMode.now) {
-      state = state.copyWith(publishMode: mode, scheduledAt: null);
-    } else {
-      state = state.copyWith(publishMode: mode);
-    }
-  }
-
-  void setScheduledAt(DateTime? dt) => state = state.copyWith(scheduledAt: dt);
 
   void _updateStory(
     String storyId,
