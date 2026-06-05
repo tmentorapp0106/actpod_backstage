@@ -1,9 +1,24 @@
 import 'package:actpod_studio/api/api.dart';
 import 'package:actpod_studio/api/response/story_response/create_package.dart';
 import 'package:actpod_studio/api/response/story_response/create_package_story.dart';
+import 'package:actpod_studio/api/response/story_response/get_package_info.dart';
+import 'package:actpod_studio/api/response/story_response/get_user_packages.dart';
 import 'package:actpod_studio/api/response/story_response/upload_story.dart';
 
 class StoryApi {
+  Future<GetPackageInfoResponse> getPackageInfo(String packageId) async {
+    final response = await DioClient.handelGet("/story/package/$packageId", {});
+    return GetPackageInfoResponse.fromResponse(response);
+  }
+
+  Future<GetUserPackagesResponse> getUserPackages(String userId) async {
+    final response = await DioClient.handelGet(
+      "/story/package/user/$userId",
+      {},
+    );
+    return GetUserPackagesResponse.fromResponse(response);
+  }
+
   Future<UploadStoryResponse> uploadStory(
     String spaceId,
     String channelId,
