@@ -265,7 +265,6 @@ class _StepButtonState extends ConsumerState<StepButton> {
           "enable",
           uploadedStory.packageNote,
           null,
-          null,
         ),
       );
     }
@@ -761,7 +760,6 @@ class _StepButtonState extends ConsumerState<StepButton> {
     String voiceMessageStatus,
     String packageNote,
     String? collaboratorId,
-    DateTime? releaseTime,
   ) async {
     if (!_useMockUpload) {
       return StoryApi().createPackageStory(
@@ -776,7 +774,6 @@ class _StepButtonState extends ConsumerState<StepButton> {
         voiceMessageStatus,
         packageNote,
         collaboratorId,
-        releaseTime,
       );
     }
     await Future.delayed(const Duration(milliseconds: 1200));

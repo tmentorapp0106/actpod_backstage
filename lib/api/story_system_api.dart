@@ -79,7 +79,6 @@ class StoryApi {
     String voiceMessageStatus,
     String packageNote,
     String? collaboratorId,
-    DateTime? releaseTime,
   ) async {
     var data = {
       "packageId": packageId,
@@ -93,7 +92,6 @@ class StoryApi {
       "voiceMessageStatus": voiceMessageStatus,
       "collaboratorId": collaboratorId,
       "packageNote": packageNote,
-      "releaseTime": releaseTime?.toUtc().toIso8601String(),
     };
 
     final response = await DioClient.handelPostWithToken(
