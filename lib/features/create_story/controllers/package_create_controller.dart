@@ -15,6 +15,7 @@ const _unset = Object();
 @immutable
 class PackagePriceDraft {
   final String id;
+  final String packagePriceId;
   final String priceType;
   final String lable;
   final int podcoins;
@@ -23,6 +24,7 @@ class PackagePriceDraft {
 
   const PackagePriceDraft({
     required this.id,
+    this.packagePriceId = '',
     required this.priceType,
     required this.lable,
     this.podcoins = 0,
@@ -34,6 +36,7 @@ class PackagePriceDraft {
 
   Map<String, dynamic> toJson() {
     return {
+      if (packagePriceId.isNotEmpty) 'packagePriceId': packagePriceId,
       'priceType': priceType,
       'lable': lable,
       'podcoins': podcoins,
@@ -43,6 +46,7 @@ class PackagePriceDraft {
   }
 
   PackagePriceDraft copyWith({
+    String? packagePriceId,
     String? priceType,
     String? lable,
     int? podcoins,
@@ -51,6 +55,7 @@ class PackagePriceDraft {
   }) {
     return PackagePriceDraft(
       id: id,
+      packagePriceId: packagePriceId ?? this.packagePriceId,
       priceType: priceType ?? this.priceType,
       lable: lable ?? this.lable,
       podcoins: podcoins ?? this.podcoins,
@@ -111,11 +116,14 @@ class PackageCreateState {
   final String? packageName;
   final String? packageDescription;
   final String? packageImagePath;
+  final String? packageImageUrl;
   final Uint8List? packageImageBytes;
   final List<PackagePriceDraft> packagePrices;
   final List<PremiumPackage> editablePackages;
   final bool loadingEditablePackages;
+  final bool loadingPackageInfo;
   final String? selectedEditPackageId;
+  final String? loadedEditPackageId;
   final List<Space> spaces;
   final String? selectedSpace;
   final List<Channel> channels;
@@ -132,18 +140,25 @@ class PackageCreateState {
     this.packageName,
     this.packageDescription,
     this.packageImagePath,
+    this.packageImageUrl,
     this.packageImageBytes,
     this.packagePrices = const [
       PackagePriceDraft(
         id: 'package_default',
-        priceType: '整套購買',
+        priceType: 'package',
         lable: '整套價格',
       ),
-      PackagePriceDraft(id: 'single_default', priceType: '單集購買', lable: '單集價格'),
+      PackagePriceDraft(
+        id: 'single_default',
+        priceType: 'single',
+        lable: '單集價格',
+      ),
     ],
     this.editablePackages = const [],
     this.loadingEditablePackages = false,
+    this.loadingPackageInfo = false,
     this.selectedEditPackageId,
+    this.loadedEditPackageId,
     this.spaces = const [],
     this.selectedSpace,
     this.channels = const [],
@@ -160,7 +175,8 @@ class PackageCreateState {
   bool get hasValidPackageInfo {
     return (packageName != null && packageName!.trim().isNotEmpty) &&
         (packageDescription != null && packageDescription!.trim().isNotEmpty) &&
-        packageImageBytes != null &&
+        (packageImageBytes != null ||
+            (packageImageUrl != null && packageImageUrl!.isNotEmpty)) &&
         (selectedSpace != null && selectedSpace!.isNotEmpty) &&
         (selectedChannel != null && selectedChannel!.isNotEmpty) &&
         packagePrices.isNotEmpty &&
@@ -175,11 +191,14 @@ class PackageCreateState {
     String? packageName,
     String? packageDescription,
     Object? packageImagePath = _unset,
+    Object? packageImageUrl = _unset,
     Object? packageImageBytes = _unset,
     List<PackagePriceDraft>? packagePrices,
     List<PremiumPackage>? editablePackages,
     bool? loadingEditablePackages,
+    bool? loadingPackageInfo,
     Object? selectedEditPackageId = _unset,
+    Object? loadedEditPackageId = _unset,
     List<Space>? spaces,
     String? selectedSpace,
     List<Channel>? channels,
@@ -198,6 +217,9 @@ class PackageCreateState {
       packageImagePath: packageImagePath == _unset
           ? this.packageImagePath
           : packageImagePath as String?,
+      packageImageUrl: packageImageUrl == _unset
+          ? this.packageImageUrl
+          : packageImageUrl as String?,
       packageImageBytes: packageImageBytes == _unset
           ? this.packageImageBytes
           : packageImageBytes as Uint8List?,
@@ -205,9 +227,13 @@ class PackageCreateState {
       editablePackages: editablePackages ?? this.editablePackages,
       loadingEditablePackages:
           loadingEditablePackages ?? this.loadingEditablePackages,
+      loadingPackageInfo: loadingPackageInfo ?? this.loadingPackageInfo,
       selectedEditPackageId: selectedEditPackageId == _unset
           ? this.selectedEditPackageId
           : selectedEditPackageId as String?,
+      loadedEditPackageId: loadedEditPackageId == _unset
+          ? this.loadedEditPackageId
+          : loadedEditPackageId as String?,
       spaces: spaces ?? this.spaces,
       selectedSpace: selectedSpace ?? this.selectedSpace,
       channels: channels ?? this.channels,
@@ -258,9 +284,6 @@ class PackageCreateController extends Notifier<PackageCreateState> {
     state = state.copyWith(loadingEditablePackages: true);
     try {
       final response = await StoryApi().getUserPackages(userId);
-      if(response.code != "0000") {
-        print(response.message);
-      }
       state = state.copyWith(
         editablePackages: response.packages,
         selectedEditPackageId:
@@ -276,14 +299,62 @@ class PackageCreateController extends Notifier<PackageCreateState> {
   }
 
   void setEditPackage(String packageId) {
-    state = state.copyWith(selectedEditPackageId: packageId);
+    state = state.copyWith(
+      selectedEditPackageId: packageId,
+      loadedEditPackageId: null,
+    );
+  }
+
+  Future<void> loadSelectedPackageInfo() async {
+    final packageId = state.selectedEditPackageId;
+    if (packageId == null || packageId.isEmpty) return;
+    if (state.loadingPackageInfo || state.loadedEditPackageId == packageId) {
+      return;
+    }
+
+    state = state.copyWith(loadingPackageInfo: true, error: null);
+    try {
+      final response = await StoryApi().getPackageInfo(packageId);
+      final packageInfo = response.packageInfo;
+      if (packageInfo == null) {
+        state = state.copyWith(error: response.message);
+        return;
+      }
+
+      state = state.copyWith(
+        packageName: packageInfo.packageName,
+        packageDescription: packageInfo.packageDescription,
+        packageImagePath: packageInfo.packageImageUrl.isEmpty ? null : '目前封面',
+        packageImageUrl: packageInfo.packageImageUrl,
+        packageImageBytes: null,
+        selectedSpace: packageInfo.spaceName,
+        selectedChannel: packageInfo.channelName,
+        packagePrices: [
+          for (final price in packageInfo.packagePrices)
+            PackagePriceDraft(
+              id: price.packagePriceId.isEmpty
+                  ? _genId('price')
+                  : price.packagePriceId,
+              packagePriceId: price.packagePriceId,
+              priceType: price.priceType,
+              lable: price.lable,
+              podcoins: price.podcoins,
+              twd: price.twd,
+              isActive: price.isActive,
+            ),
+        ],
+        loadedEditPackageId: packageId,
+      );
+    } finally {
+      state = state.copyWith(loadingPackageInfo: false);
+    }
   }
 
   void addPackagePrice() {
     state = state.copyWith(
       packagePrices: [
         ...state.packagePrices,
-        PackagePriceDraft(id: _genId('price'), priceType: '整套購買', lable: ''),
+        PackagePriceDraft(id: _genId('price'), priceType: 'package', lable: ''),
       ],
     );
   }
@@ -337,6 +408,7 @@ class PackageCreateController extends Notifier<PackageCreateState> {
 
       state = state.copyWith(
         packageImagePath: file.name,
+        packageImageUrl: null,
         packageImageBytes: file.bytes,
       );
     } finally {

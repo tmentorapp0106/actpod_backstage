@@ -1,3 +1,4 @@
+import 'package:actpod_studio/features/create_story/controllers/create_flow_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/package_create_controller.dart';
 import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,14 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
     _descriptionController = TextEditingController(
       text: state.packageDescription ?? '',
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final flow = ref.read(createFlowControllerProvider);
+      if (flow.flowType == CreateFlowType.editPackage) {
+        ref
+            .read(packageCreateControllerProvider.notifier)
+            .loadSelectedPackageInfo();
+      }
+    });
   }
 
   @override
@@ -33,6 +42,17 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(packageCreateControllerProvider, (previous, next) {
+      if (previous?.packageName != next.packageName &&
+          _nameController.text != (next.packageName ?? '')) {
+        _nameController.text = next.packageName ?? '';
+      }
+      if (previous?.packageDescription != next.packageDescription &&
+          _descriptionController.text != (next.packageDescription ?? '')) {
+        _descriptionController.text = next.packageDescription ?? '';
+      }
+    });
+
     final state = ref.watch(packageCreateControllerProvider);
     final ctrl = ref.read(packageCreateControllerProvider.notifier);
 
@@ -42,10 +62,26 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '套裝資訊',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '套裝資訊',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                if (state.loadingPackageInfo)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
             ),
+            if (state.error != null && state.error!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(state.error!, style: const TextStyle(color: Colors.red)),
+            ],
             const SizedBox(height: 18),
             TextFormField(
               controller: _nameController,
@@ -130,7 +166,13 @@ class _PackageImagePicker extends StatelessWidget {
                   ? null
                   : ctrl.pickPackageImage,
               icon: const Icon(Icons.image_rounded),
-              label: Text(state.packageImageBytes == null ? '上傳封面' : '更換封面'),
+              label: Text(
+                state.packageImageBytes == null &&
+                        (state.packageImageUrl == null ||
+                            state.packageImageUrl!.isEmpty)
+                    ? '上傳封面'
+                    : '更換封面',
+              ),
             ),
             if (state.pickingPackageImage)
               const SizedBox(
@@ -156,6 +198,24 @@ class _PackageImagePicker extends StatelessWidget {
               fit: BoxFit.cover,
             ),
           ),
+        ] else if (state.packageImageUrl != null &&
+            state.packageImageUrl!.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              state.packageImageUrl!,
+              width: 120,
+              height: 120,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: 120,
+                height: 120,
+                color: Colors.grey.shade100,
+                child: const Icon(Icons.broken_image_rounded),
+              ),
+            ),
+          ),
         ],
       ],
     );
@@ -171,6 +231,7 @@ class _SpaceField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
+      key: ValueKey('space_${state.selectedSpace ?? ''}'),
       initialValue: state.selectedSpace,
       items: state.spaces
           .map(
@@ -199,6 +260,7 @@ class _ChannelField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
+      key: ValueKey('channel_${state.selectedChannel ?? ''}'),
       initialValue: state.selectedChannel,
       items: state.channels
           .map(
@@ -250,7 +312,9 @@ class _PackagePricesEditor extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: _PackagePriceRow(
               price: price,
-              canRemove: state.packagePrices.length > 1,
+              canRemove:
+                  state.packagePrices.length > 1 &&
+                  price.packagePriceId.isEmpty,
               ctrl: ctrl,
             ),
           ),
@@ -285,8 +349,8 @@ class _PackagePriceRow extends StatelessWidget {
             DropdownButtonFormField<String>(
               initialValue: price.priceType,
               items: const [
-                DropdownMenuItem(value: '整套購買', child: Text('整套購買')),
-                DropdownMenuItem(value: '單集購買', child: Text('單集購買')),
+                DropdownMenuItem(value: 'package', child: Text('整套購買')),
+                DropdownMenuItem(value: 'single', child: Text('單集購買')),
               ],
               onChanged: (value) {
                 if (value != null) ctrl.setPackagePriceType(price.id, value);
