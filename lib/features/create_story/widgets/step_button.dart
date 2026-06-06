@@ -1,6 +1,8 @@
 import 'package:actpod_studio/api/response/story_response/create_package.dart';
 import 'package:actpod_studio/api/response/story_response/create_package_story.dart';
 import 'package:actpod_studio/api/response/story_response/package_models.dart';
+import 'package:actpod_studio/api/response/story_response/update_package.dart';
+import 'package:actpod_studio/api/response/story_response/update_package_story.dart';
 import 'package:actpod_studio/api/response/story_response/upload_story.dart';
 import 'package:actpod_studio/api/response/upload_response/upload_package_image.dart';
 import 'package:actpod_studio/api/response/upload_response/upload_story_content.dart';
@@ -11,6 +13,7 @@ import 'package:actpod_studio/features/create_story/const.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_flow_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/package_create_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_shared_models.dart';
+import 'package:actpod_studio/features/create_story/controllers/package_edit_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
 import 'package:actpod_studio/features/create_story/widgets/step_nav_bar.dart';
@@ -75,10 +78,11 @@ class _StepButtonState extends ConsumerState<StepButton> {
 
     if (flow.flowType == CreateFlowType.editPackage) {
       final packageState = ref.watch(packageCreateControllerProvider);
+      final editState = ref.watch(packageEditControllerProvider);
       switch (stepIndex) {
         case 1:
-          return packageState.selectedEditPackageId != null &&
-              packageState.selectedEditPackageId!.isNotEmpty;
+          return editState.selectedPackageId != null &&
+              editState.selectedPackageId!.isNotEmpty;
         case 2:
           return packageState.hasValidPackageInfo;
         case 3:
@@ -130,16 +134,11 @@ class _StepButtonState extends ConsumerState<StepButton> {
     final flowCtrl = ref.read(createFlowControllerProvider.notifier);
     final flow = ref.read(createFlowControllerProvider);
     final packageCtrl = ref.read(packageCreateControllerProvider.notifier);
+    final packageEditCtrl = ref.read(packageEditControllerProvider.notifier);
     final singleCtrl = ref.read(singleCreateControllerProvider.notifier);
 
-    if (flow.flowType == CreateFlowType.editPackage) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('編輯套裝送出流程尚未完成')));
-      return;
-    }
-
-    if (flow.flowType == CreateFlowType.package &&
+    if ((flow.flowType == CreateFlowType.package ||
+            flow.flowType == CreateFlowType.editPackage) &&
         ref
             .read(packageCreateControllerProvider)
             .probingDurationStoryIds
@@ -151,6 +150,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
     }
 
     if (flow.flowType != CreateFlowType.package &&
+        flow.flowType != CreateFlowType.editPackage &&
         ref
             .read(singleCreateControllerProvider)
             .probingDurationAudioIds
@@ -161,7 +161,11 @@ class _StepButtonState extends ConsumerState<StepButton> {
       return;
     }
 
-    if (flow.flowType == CreateFlowType.package) {
+    if (flow.flowType == CreateFlowType.editPackage) {
+      flowCtrl.beginUploadQueue(
+        _buildEditPackageUploadQueue(ref.read(packageCreateControllerProvider)),
+      );
+    } else if (flow.flowType == CreateFlowType.package) {
       flowCtrl.beginUploadQueue(
         _buildPackageUploadQueue(ref.read(packageCreateControllerProvider)),
       );
@@ -172,7 +176,16 @@ class _StepButtonState extends ConsumerState<StepButton> {
     }
 
     try {
-      if (flow.flowType == CreateFlowType.package) {
+      if (flow.flowType == CreateFlowType.editPackage) {
+        await _submitEditPackage(
+          flowCtrl,
+          ref.read(packageCreateControllerProvider),
+          ref.read(packageEditControllerProvider).selectedPackageId,
+        );
+        if (!mounted) return;
+        packageCtrl.clear();
+        packageEditCtrl.clear();
+      } else if (flow.flowType == CreateFlowType.package) {
         await _submitPackage(
           flowCtrl,
           ref.read(packageCreateControllerProvider),
@@ -298,6 +311,90 @@ class _StepButtonState extends ConsumerState<StepButton> {
     }
   }
 
+  Future<void> _submitEditPackage(
+    CreateFlowController flowCtrl,
+    PackageCreateState state,
+    String? selectedPackageId,
+  ) async {
+    final packageId = selectedPackageId;
+    if (packageId == null || packageId.isEmpty) {
+      throw StateError('missing package id');
+    }
+
+    var packageImageUrl = state.packageImageUrl ?? '';
+    if (state.packageImageBytes != null) {
+      final packageImageResponse = await _runUploadStep(
+        flowCtrl,
+        'package-image',
+        () => _uploadPackageImage(
+          state.packageImagePath!,
+          state.packageImageBytes!,
+        ),
+      );
+      packageImageUrl = packageImageResponse.publicUrl;
+    }
+
+    await _runUploadStep(
+      flowCtrl,
+      'package-update',
+      () => _updatePackage(
+        packageId,
+        state.packageName!,
+        state.packageDescription!,
+        packageImageUrl,
+        state.packagePrices,
+      ),
+    );
+
+    for (var i = 0; i < state.stories.length; i++) {
+      final story = state.stories[i];
+      final uploadedStory = await _uploadEditPackageStoryAssets(
+        flowCtrl,
+        story,
+        i,
+      );
+
+      if (story.isExisting) {
+        await _runUploadStep(
+          flowCtrl,
+          'package-story-update-$i',
+          () => _updatePackageStory(
+            story.storyId,
+            packageId,
+            uploadedStory.contentUrl,
+            uploadedStory.title,
+            uploadedStory.description,
+            uploadedStory.imageUrls,
+            uploadedStory.duration.inMilliseconds,
+            uploadedStory.previewStartFrom,
+            uploadedStory.previewEndAt,
+            uploadedStory.packageNote,
+            story.collaboratorId,
+            story.shouldUpdateStoryAudio,
+          ),
+        );
+      } else {
+        await _runUploadStep(
+          flowCtrl,
+          'package-story-create-$i',
+          () => _createPackageStory(
+            packageId,
+            uploadedStory.contentUrl,
+            uploadedStory.title,
+            uploadedStory.description,
+            uploadedStory.imageUrls,
+            uploadedStory.duration.inMilliseconds,
+            _previewStart(uploadedStory.duration),
+            _previewEnd(uploadedStory.duration),
+            "enable",
+            uploadedStory.packageNote,
+            story.collaboratorId.isEmpty ? null : story.collaboratorId,
+          ),
+        );
+      }
+    }
+  }
+
   Future<_UploadedStoryAssets> _uploadSingleAssets(
     CreateFlowController flowCtrl,
     SingleCreateState state,
@@ -385,6 +482,65 @@ class _StepButtonState extends ConsumerState<StepButton> {
     );
   }
 
+  Future<_UploadedPackageStory> _uploadEditPackageStoryAssets(
+    CreateFlowController flowCtrl,
+    PackageStoryDraft story,
+    int storyIndex,
+  ) async {
+    var contentUrl = story.contentUrl;
+    var duration = Duration(milliseconds: story.storyMilliSec);
+    final audio = story.audio;
+    if (audio != null) {
+      final contentResponse = await _runUploadStep(
+        flowCtrl,
+        'package-story-audio-$storyIndex',
+        () => audio.readStream != null && audio.fileSize > 0
+            ? _uploadStoryContentStream(
+                audio.fileName,
+                audio.readStream!,
+                audio.fileSize,
+              )
+            : _uploadStoryContent(audio.fileName, audio.fileBytes),
+      );
+      contentUrl = contentResponse.publicUrl;
+      duration = audio.duration;
+    } else if (story.shouldUpdateStoryAudio && contentUrl.isEmpty) {
+      duration = Duration.zero;
+    }
+
+    final imageUrls = <String>[];
+    if (story.imageFilesBytes.isEmpty) {
+      imageUrls.addAll(story.remoteImageUrls);
+    } else {
+      for (var i = 0; i < story.imageFilePaths.length; i++) {
+        final imageResponse = await _runUploadStep(
+          flowCtrl,
+          'package-story-image-$storyIndex-$i',
+          () => _uploadStoryImage(
+            story.imageFilePaths[i],
+            story.imageFilesBytes[i],
+          ),
+        );
+        imageUrls.add(imageResponse.publicUrl);
+      }
+    }
+
+    return _UploadedPackageStory(
+      title: story.title,
+      description: story.description,
+      packageNote: story.packageNote,
+      contentUrl: contentUrl,
+      imageUrls: imageUrls,
+      duration: duration,
+      previewStartFrom: audio == null
+          ? (contentUrl.isEmpty ? 0 : story.previewStartFrom)
+          : _previewStart(duration),
+      previewEndAt: audio == null
+          ? (contentUrl.isEmpty ? 0 : story.previewEndAt)
+          : _previewEnd(duration),
+    );
+  }
+
   Future<T> _runUploadStep<T>(
     CreateFlowController flowCtrl,
     String taskId,
@@ -460,6 +616,53 @@ class _StepButtonState extends ConsumerState<StepButton> {
         UploadQueueItem(
           id: 'package-story-create-$i',
           label: '建立 Story ${i + 1} 資料',
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  List<UploadQueueItem> _buildEditPackageUploadQueue(PackageCreateState state) {
+    final items = <UploadQueueItem>[];
+
+    if (state.packageImageBytes != null) {
+      items.add(
+        UploadQueueItem(
+          id: 'package-image',
+          label: '上傳套裝圖片: ${state.packageImagePath!}',
+        ),
+      );
+    }
+
+    items.add(const UploadQueueItem(id: 'package-update', label: '更新套裝資料'));
+
+    for (var i = 0; i < state.stories.length; i++) {
+      final story = state.stories[i];
+      if (story.audio != null) {
+        items.add(
+          UploadQueueItem(
+            id: 'package-story-audio-$i',
+            label: '上傳 Story ${i + 1} 音檔: ${story.audio!.fileName}',
+          ),
+        );
+      }
+      for (var j = 0; j < story.imageFilePaths.length; j++) {
+        items.add(
+          UploadQueueItem(
+            id: 'package-story-image-$i-$j',
+            label: '上傳 Story ${i + 1} 圖片 ${j + 1}: ${story.imageFilePaths[j]}',
+          ),
+        );
+      }
+      items.add(
+        UploadQueueItem(
+          id: story.isExisting
+              ? 'package-story-update-$i'
+              : 'package-story-create-$i',
+          label: story.isExisting
+              ? '更新 Story ${i + 1} 資料'
+              : '建立 Story ${i + 1} 資料',
         ),
       );
     }
@@ -822,6 +1025,74 @@ class _StepButtonState extends ConsumerState<StepButton> {
       storyId: 'mock-package-story-id',
     );
   }
+
+  Future<UpdatePackageResponse> _updatePackage(
+    String packageId,
+    String packageName,
+    String packageDescription,
+    String packageImageUrl,
+    List<PackagePriceDraft> packagePrices,
+  ) async {
+    if (!_useMockUpload) {
+      return StoryApi().updatePackage(
+        packageId,
+        packageName,
+        packageDescription,
+        packageImageUrl,
+        packagePrices
+            .map(
+              (price) => PackagePrice(
+                packagePriceId: price.packagePriceId,
+                priceType: price.priceType,
+                lable: price.lable,
+                podcoins: price.podcoins,
+                twd: price.twd,
+                isActive: price.isActive,
+              ),
+            )
+            .toList(),
+      );
+    }
+    await Future.delayed(const Duration(milliseconds: 1200));
+    return const UpdatePackageResponse(code: '200', message: 'mock success');
+  }
+
+  Future<UpdatePackageStoryResponse> _updatePackageStory(
+    String storyId,
+    String packageId,
+    String contentUrl,
+    String storyName,
+    String storyDescription,
+    List<String> storyImageUrls,
+    int storyMilliSec,
+    int previewStartFrom,
+    int previewEndAt,
+    String packageNote,
+    String collaboratorId,
+    bool updateStory,
+  ) async {
+    if (!_useMockUpload) {
+      return StoryApi().updatePackageStory(
+        storyId,
+        packageId,
+        contentUrl,
+        storyName,
+        storyDescription,
+        storyImageUrls,
+        storyMilliSec,
+        previewStartFrom,
+        previewEndAt,
+        packageNote,
+        collaboratorId,
+        updateStory,
+      );
+    }
+    await Future.delayed(const Duration(milliseconds: 1200));
+    return const UpdatePackageStoryResponse(
+      code: '200',
+      message: 'mock success',
+    );
+  }
 }
 
 class _UploadedStoryAssets {
@@ -866,6 +1137,8 @@ class _UploadedPackageStory {
   final String contentUrl;
   final List<String> imageUrls;
   final Duration duration;
+  final int previewStartFrom;
+  final int previewEndAt;
 
   const _UploadedPackageStory({
     required this.title,
@@ -874,5 +1147,7 @@ class _UploadedPackageStory {
     required this.contentUrl,
     required this.imageUrls,
     required this.duration,
+    this.previewStartFrom = 0,
+    this.previewEndAt = 0,
   });
 }

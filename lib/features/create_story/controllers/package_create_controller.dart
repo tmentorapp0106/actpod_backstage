@@ -1,6 +1,5 @@
 import 'package:actpod_studio/api/channel_system_api.dart';
 import 'package:actpod_studio/api/space_system_api.dart';
-import 'package:actpod_studio/api/story_system_api.dart';
 import 'package:actpod_studio/api/response/story_response/package_models.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_shared_models.dart';
 import 'package:actpod_studio/features/create_story/models/channel_model.dart';
@@ -68,43 +67,89 @@ class PackagePriceDraft {
 @immutable
 class PackageStoryDraft {
   final String id;
+  final String storyId;
   final String title;
   final String description;
   final String packageNote;
   final UploadedAudio? audio;
+  final String contentUrl;
+  final String originalContentUrl;
+  final List<String> remoteImageUrls;
+  final int storyMilliSec;
+  final int previewStartFrom;
+  final int previewEndAt;
+  final String collaboratorId;
+  final String storyStatus;
   final List<String> imageFilePaths;
   final List<Uint8List> imageFilesBytes;
 
   const PackageStoryDraft({
     required this.id,
+    this.storyId = '',
     this.title = '',
     this.description = '',
     this.packageNote = '',
     this.audio,
+    this.contentUrl = '',
+    this.originalContentUrl = '',
+    this.remoteImageUrls = const [],
+    this.storyMilliSec = 0,
+    this.previewStartFrom = 0,
+    this.previewEndAt = 0,
+    this.collaboratorId = '',
+    this.storyStatus = '',
     this.imageFilePaths = const [],
     this.imageFilesBytes = const [],
   });
 
+  bool get isExisting => storyId.isNotEmpty;
+
+  bool get hasNewAudio => audio != null;
+
+  bool get shouldUpdateStoryAudio =>
+      hasNewAudio || contentUrl != originalContentUrl;
+
+  bool get hasImages =>
+      imageFilesBytes.isNotEmpty || remoteImageUrls.isNotEmpty;
+
   bool get isComplete {
     return title.trim().isNotEmpty &&
         description.trim().isNotEmpty &&
-        imageFilesBytes.isNotEmpty;
+        hasImages;
   }
 
   PackageStoryDraft copyWith({
+    String? storyId,
     String? title,
     String? description,
     String? packageNote,
     Object? audio = _unset,
+    String? contentUrl,
+    String? originalContentUrl,
+    List<String>? remoteImageUrls,
+    int? storyMilliSec,
+    int? previewStartFrom,
+    int? previewEndAt,
+    String? collaboratorId,
+    String? storyStatus,
     List<String>? imageFilePaths,
     List<Uint8List>? imageFilesBytes,
   }) {
     return PackageStoryDraft(
       id: id,
+      storyId: storyId ?? this.storyId,
       title: title ?? this.title,
       description: description ?? this.description,
       packageNote: packageNote ?? this.packageNote,
       audio: audio == _unset ? this.audio : audio as UploadedAudio?,
+      contentUrl: contentUrl ?? this.contentUrl,
+      originalContentUrl: originalContentUrl ?? this.originalContentUrl,
+      remoteImageUrls: remoteImageUrls ?? this.remoteImageUrls,
+      storyMilliSec: storyMilliSec ?? this.storyMilliSec,
+      previewStartFrom: previewStartFrom ?? this.previewStartFrom,
+      previewEndAt: previewEndAt ?? this.previewEndAt,
+      collaboratorId: collaboratorId ?? this.collaboratorId,
+      storyStatus: storyStatus ?? this.storyStatus,
       imageFilePaths: imageFilePaths ?? this.imageFilePaths,
       imageFilesBytes: imageFilesBytes ?? this.imageFilesBytes,
     );
@@ -119,11 +164,6 @@ class PackageCreateState {
   final String? packageImageUrl;
   final Uint8List? packageImageBytes;
   final List<PackagePriceDraft> packagePrices;
-  final List<PremiumPackage> editablePackages;
-  final bool loadingEditablePackages;
-  final bool loadingPackageInfo;
-  final String? selectedEditPackageId;
-  final String? loadedEditPackageId;
   final List<Space> spaces;
   final String? selectedSpace;
   final List<Channel> channels;
@@ -154,11 +194,6 @@ class PackageCreateState {
         lable: '單集價格',
       ),
     ],
-    this.editablePackages = const [],
-    this.loadingEditablePackages = false,
-    this.loadingPackageInfo = false,
-    this.selectedEditPackageId,
-    this.loadedEditPackageId,
     this.spaces = const [],
     this.selectedSpace,
     this.channels = const [],
@@ -194,11 +229,6 @@ class PackageCreateState {
     Object? packageImageUrl = _unset,
     Object? packageImageBytes = _unset,
     List<PackagePriceDraft>? packagePrices,
-    List<PremiumPackage>? editablePackages,
-    bool? loadingEditablePackages,
-    bool? loadingPackageInfo,
-    Object? selectedEditPackageId = _unset,
-    Object? loadedEditPackageId = _unset,
     List<Space>? spaces,
     String? selectedSpace,
     List<Channel>? channels,
@@ -224,16 +254,6 @@ class PackageCreateState {
           ? this.packageImageBytes
           : packageImageBytes as Uint8List?,
       packagePrices: packagePrices ?? this.packagePrices,
-      editablePackages: editablePackages ?? this.editablePackages,
-      loadingEditablePackages:
-          loadingEditablePackages ?? this.loadingEditablePackages,
-      loadingPackageInfo: loadingPackageInfo ?? this.loadingPackageInfo,
-      selectedEditPackageId: selectedEditPackageId == _unset
-          ? this.selectedEditPackageId
-          : selectedEditPackageId as String?,
-      loadedEditPackageId: loadedEditPackageId == _unset
-          ? this.loadedEditPackageId
-          : loadedEditPackageId as String?,
       spaces: spaces ?? this.spaces,
       selectedSpace: selectedSpace ?? this.selectedSpace,
       channels: channels ?? this.channels,
@@ -278,76 +298,49 @@ class PackageCreateController extends Notifier<PackageCreateState> {
   void setSpace(String? v) => state = state.copyWith(selectedSpace: v);
   void setChannel(String? v) => state = state.copyWith(selectedChannel: v);
 
-  Future<void> loadEditablePackages(String userId) async {
-    if (state.loadingEditablePackages) return;
-
-    state = state.copyWith(loadingEditablePackages: true);
-    try {
-      final response = await StoryApi().getUserPackages(userId);
-      state = state.copyWith(
-        editablePackages: response.packages,
-        selectedEditPackageId:
-            response.packages.any(
-              (package) => package.packageId == state.selectedEditPackageId,
-            )
-            ? state.selectedEditPackageId
-            : null,
-      );
-    } finally {
-      state = state.copyWith(loadingEditablePackages: false);
-    }
-  }
-
-  void setEditPackage(String packageId) {
+  void applyPackageInfo(PackageInfo packageInfo) {
     state = state.copyWith(
-      selectedEditPackageId: packageId,
-      loadedEditPackageId: null,
+      packageName: packageInfo.packageName,
+      packageDescription: packageInfo.packageDescription,
+      packageImagePath: packageInfo.packageImageUrl.isEmpty ? null : '目前封面',
+      packageImageUrl: packageInfo.packageImageUrl,
+      packageImageBytes: null,
+      selectedSpace: packageInfo.spaceName,
+      selectedChannel: packageInfo.channelName,
+      packagePrices: [
+        for (final price in packageInfo.packagePrices)
+          PackagePriceDraft(
+            id: price.packagePriceId.isEmpty
+                ? _genId('price')
+                : price.packagePriceId,
+            packagePriceId: price.packagePriceId,
+            priceType: price.priceType,
+            lable: price.lable,
+            podcoins: price.podcoins,
+            twd: price.twd,
+            isActive: price.isActive,
+          ),
+      ],
+      stories: [
+        for (final story in packageInfo.stories)
+          PackageStoryDraft(
+            id: story.storyId.isEmpty ? _genId('story') : story.storyId,
+            storyId: story.storyId,
+            title: story.storyName,
+            description: story.storyDescription,
+            packageNote: story.packageNote,
+            contentUrl: story.storyUrl,
+            originalContentUrl: story.storyUrl,
+            remoteImageUrls: story.storyImageUrls,
+            storyMilliSec: story.storyLength,
+            previewStartFrom: story.previewStartFrom,
+            previewEndAt: story.previewEndAt,
+            collaboratorId: story.collaborator,
+            storyStatus: story.storyStatus,
+          ),
+      ],
+      error: null,
     );
-  }
-
-  Future<void> loadSelectedPackageInfo() async {
-    final packageId = state.selectedEditPackageId;
-    if (packageId == null || packageId.isEmpty) return;
-    if (state.loadingPackageInfo || state.loadedEditPackageId == packageId) {
-      return;
-    }
-
-    state = state.copyWith(loadingPackageInfo: true, error: null);
-    try {
-      final response = await StoryApi().getPackageInfo(packageId);
-      final packageInfo = response.packageInfo;
-      if (packageInfo == null) {
-        state = state.copyWith(error: response.message);
-        return;
-      }
-
-      state = state.copyWith(
-        packageName: packageInfo.packageName,
-        packageDescription: packageInfo.packageDescription,
-        packageImagePath: packageInfo.packageImageUrl.isEmpty ? null : '目前封面',
-        packageImageUrl: packageInfo.packageImageUrl,
-        packageImageBytes: null,
-        selectedSpace: packageInfo.spaceName,
-        selectedChannel: packageInfo.channelName,
-        packagePrices: [
-          for (final price in packageInfo.packagePrices)
-            PackagePriceDraft(
-              id: price.packagePriceId.isEmpty
-                  ? _genId('price')
-                  : price.packagePriceId,
-              packagePriceId: price.packagePriceId,
-              priceType: price.priceType,
-              lable: price.lable,
-              podcoins: price.podcoins,
-              twd: price.twd,
-              isActive: price.isActive,
-            ),
-        ],
-        loadedEditPackageId: packageId,
-      );
-    } finally {
-      state = state.copyWith(loadingPackageInfo: false);
-    }
   }
 
   void addPackagePrice() {
@@ -444,7 +437,13 @@ class PackageCreateController extends Notifier<PackageCreateState> {
   }
 
   void clearStoryAudio(String storyId) {
-    _updateStory(storyId, (story) => story.copyWith(audio: null));
+    _updateStory(
+      storyId,
+      (story) => story.copyWith(
+        audio: null,
+        contentUrl: story.isExisting ? '' : story.contentUrl,
+      ),
+    );
     _setDurationProbing(storyId, false);
   }
 

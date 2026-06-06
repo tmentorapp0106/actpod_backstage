@@ -1,3 +1,4 @@
+import 'package:actpod_studio/app/theme/app_colors.dart';
 import 'package:actpod_studio/features/create_story/controllers/package_create_controller.dart';
 import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';
@@ -121,6 +122,7 @@ class _PricePreviewItem extends StatelessWidget {
           Chip(
             label: Text(price.isActive ? '啟用' : '停用'),
             visualDensity: VisualDensity.compact,
+            backgroundColor: price.isActive ? AppColors.brand : null
           ),
         ],
       ),
@@ -140,6 +142,11 @@ class _StoryPreviewItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final audio = story.audio;
+    final duration =
+        audio?.duration ??
+        (story.contentUrl.isNotEmpty
+            ? Duration(milliseconds: story.storyMilliSec)
+            : Duration.zero);
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -162,6 +169,11 @@ class _StoryPreviewItem extends StatelessWidget {
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
+                ),
+                const SizedBox(height: 6),
+                Chip(
+                  label: Text(story.isExisting ? '原有 Story' : '新增 Story'),
+                  visualDensity: VisualDensity.compact,
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -188,13 +200,15 @@ class _StoryPreviewItem extends StatelessWidget {
                   children: [
                     _MetaChip(
                       icon: Icons.audio_file_rounded,
-                      label: audio?.fileName ?? '未上傳音檔',
+                      label:
+                          audio?.fileName ??
+                          (story.contentUrl.isNotEmpty ? '既有音檔' : '未上傳音檔'),
                     ),
                     _MetaChip(
                       icon: Icons.timer_outlined,
                       label: isLoadingDuration
                           ? '解析中...'
-                          : _fmtDuration(audio?.duration ?? Duration.zero),
+                          : _fmtDuration(duration),
                     ),
                   ],
                 ),
@@ -227,10 +241,25 @@ class _CoverPreview extends StatelessWidget {
         width: 88,
         height: 88,
         child: story.imageFilesBytes.isEmpty
-            ? Container(
-                color: Colors.grey.shade100,
-                child: const Icon(Icons.image_outlined, color: Colors.black38),
-              )
+            ? story.remoteImageUrls.isEmpty
+                  ? Container(
+                      color: Colors.grey.shade100,
+                      child: const Icon(
+                        Icons.image_outlined,
+                        color: Colors.black38,
+                      ),
+                    )
+                  : Image.network(
+                      story.remoteImageUrls.first,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: Colors.grey.shade100,
+                        child: const Icon(
+                          Icons.broken_image_rounded,
+                          color: Colors.black38,
+                        ),
+                      ),
+                    )
             : Image.memory(story.imageFilesBytes.first, fit: BoxFit.cover),
       ),
     );

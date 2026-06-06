@@ -150,6 +150,11 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
                     ),
                   ),
                 ),
+                Chip(
+                  label: Text(story.isExisting ? '原有 Story' : '新增 Story'),
+                  visualDensity: VisualDensity.compact,
+                ),
+                const SizedBox(width: 8),
                 IconButton(
                   tooltip: '刪除 Story',
                   onPressed: () => ctrl.removeStory(story.id),
@@ -205,6 +210,21 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
                   label: Text(story.audio == null ? '上傳音檔（選填）' : '更換音檔'),
                 ),
                 if (isPickingAudio) const _InlineLoading(),
+                if (story.isExisting &&
+                    story.originalContentUrl.isNotEmpty &&
+                    story.contentUrl.isEmpty &&
+                    story.audio == null)
+                  const _InfoChip(
+                    icon: Icons.remove_circle_outline_rounded,
+                    label: '已移除音檔',
+                  )
+                else if (story.isExisting && story.contentUrl.isNotEmpty)
+                  _InfoChip(
+                    icon: story.hasNewAudio
+                        ? Icons.change_circle_rounded
+                        : Icons.cloud_done_rounded,
+                    label: story.hasNewAudio ? '已更換音檔' : '使用既有音檔',
+                  ),
                 if (story.audio != null)
                   _InfoChip(
                     icon: Icons.check_circle_rounded,
@@ -212,11 +232,28 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
                         ? story.audio!.fileName
                         : '${story.audio!.fileName} ・ ${_fmtDuration(story.audio!.duration)}',
                   ),
-                if (story.audio != null)
-                  IconButton.outlined(
-                    tooltip: '移除音檔',
-                    onPressed: () => ctrl.clearStoryAudio(story.id),
-                    icon: const Icon(Icons.close_rounded),
+                if (story.audio != null ||
+                    (story.isExisting && story.contentUrl.isNotEmpty))
+                  InkWell(
+                    onTap: () => ctrl.clearStoryAudio(story.id),
+                    borderRadius: BorderRadius.circular(999),
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.grey.shade500,
+                          width: 1,
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 12,
+                        ),
+                      ),
+                    ),
                   ),
                 OutlinedButton.icon(
                   onPressed: canPickCover
@@ -230,6 +267,11 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
                   _InfoChip(
                     icon: Icons.check_circle_rounded,
                     label: '${story.imageFilesBytes.length} 張封面',
+                  )
+                else if (story.remoteImageUrls.isNotEmpty)
+                  _InfoChip(
+                    icon: Icons.cloud_done_rounded,
+                    label: '${story.remoteImageUrls.length} 張既有封面',
                   ),
               ],
             ),
@@ -243,6 +285,19 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     return _CoverThumb(bytes: story.imageFilesBytes[index]);
+                  },
+                ),
+              ),
+            ] else if (story.remoteImageUrls.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 92,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: story.remoteImageUrls.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    return _RemoteCoverThumb(url: story.remoteImageUrls[index]);
                   },
                 ),
               ),
@@ -298,6 +353,31 @@ class _CoverThumb extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: Image.memory(bytes, width: 92, height: 92, fit: BoxFit.cover),
+    );
+  }
+}
+
+class _RemoteCoverThumb extends StatelessWidget {
+  final String url;
+
+  const _RemoteCoverThumb({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.network(
+        url,
+        width: 92,
+        height: 92,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          width: 92,
+          height: 92,
+          color: Colors.grey.shade100,
+          child: const Icon(Icons.broken_image_rounded),
+        ),
+      ),
     );
   }
 }

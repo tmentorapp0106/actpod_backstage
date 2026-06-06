@@ -1,5 +1,6 @@
 import 'package:actpod_studio/features/create_story/controllers/create_flow_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/package_create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/package_edit_controller.dart';
 import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,8 +28,14 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
       final flow = ref.read(createFlowControllerProvider);
       if (flow.flowType == CreateFlowType.editPackage) {
         ref
-            .read(packageCreateControllerProvider.notifier)
-            .loadSelectedPackageInfo();
+            .read(packageEditControllerProvider.notifier)
+            .loadSelectedPackageInfo()
+            .then((packageInfo) {
+              if (packageInfo == null) return;
+              ref
+                  .read(packageCreateControllerProvider.notifier)
+                  .applyPackageInfo(packageInfo);
+            });
       }
     });
   }
@@ -54,7 +61,11 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
     });
 
     final state = ref.watch(packageCreateControllerProvider);
+    final editState = ref.watch(packageEditControllerProvider);
     final ctrl = ref.read(packageCreateControllerProvider.notifier);
+    final isEditPackage =
+        ref.watch(createFlowControllerProvider).flowType ==
+        CreateFlowType.editPackage;
 
     return AppCard(
       child: Padding(
@@ -70,7 +81,7 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                   ),
                 ),
-                if (state.loadingPackageInfo)
+                if (editState.loadingPackageInfo)
                   const SizedBox(
                     width: 18,
                     height: 18,
@@ -78,9 +89,9 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
                   ),
               ],
             ),
-            if (state.error != null && state.error!.isNotEmpty) ...[
+            if (editState.error != null && editState.error!.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text(state.error!, style: const TextStyle(color: Colors.red)),
+              Text(editState.error!, style: const TextStyle(color: Colors.red)),
             ],
             const SizedBox(height: 18),
             TextFormField(
@@ -109,8 +120,16 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
             const SizedBox(height: 16),
             LayoutBuilder(
               builder: (context, constraints) {
-                final spaceField = _SpaceField(state: state, ctrl: ctrl);
-                final channelField = _ChannelField(state: state, ctrl: ctrl);
+                final spaceField = _SpaceField(
+                  state: state,
+                  ctrl: ctrl,
+                  enabled: !isEditPackage,
+                );
+                final channelField = _ChannelField(
+                  state: state,
+                  ctrl: ctrl,
+                  enabled: !isEditPackage,
+                );
 
                 if (constraints.maxWidth >= 720) {
                   return Row(
@@ -225,8 +244,13 @@ class _PackageImagePicker extends StatelessWidget {
 class _SpaceField extends StatelessWidget {
   final PackageCreateState state;
   final PackageCreateController ctrl;
+  final bool enabled;
 
-  const _SpaceField({required this.state, required this.ctrl});
+  const _SpaceField({
+    required this.state,
+    required this.ctrl,
+    required this.enabled,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -241,7 +265,7 @@ class _SpaceField extends StatelessWidget {
             ),
           )
           .toList(),
-      onChanged: ctrl.setSpace,
+      onChanged: enabled ? ctrl.setSpace : null,
       decoration: const InputDecoration(
         labelText: '套裝 Space',
         border: OutlineInputBorder(),
@@ -254,8 +278,13 @@ class _SpaceField extends StatelessWidget {
 class _ChannelField extends StatelessWidget {
   final PackageCreateState state;
   final PackageCreateController ctrl;
+  final bool enabled;
 
-  const _ChannelField({required this.state, required this.ctrl});
+  const _ChannelField({
+    required this.state,
+    required this.ctrl,
+    required this.enabled,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -270,7 +299,7 @@ class _ChannelField extends StatelessWidget {
             ),
           )
           .toList(),
-      onChanged: ctrl.setChannel,
+      onChanged: enabled ? ctrl.setChannel : null,
       decoration: const InputDecoration(
         labelText: '套裝 Channel',
         border: OutlineInputBorder(),

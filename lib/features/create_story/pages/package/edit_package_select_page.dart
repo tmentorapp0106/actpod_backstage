@@ -1,5 +1,5 @@
 import 'package:actpod_studio/api/response/story_response/package_models.dart';
-import 'package:actpod_studio/features/create_story/controllers/package_create_controller.dart';
+import 'package:actpod_studio/features/create_story/controllers/package_edit_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
 import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:flutter/material.dart';
@@ -26,15 +26,15 @@ class _EditPackageSelectStepState extends ConsumerState<EditPackageSelectStep> {
       final userId = ref.read(userControllerProvider)?.userId ?? '';
       if (userId.isEmpty) return;
       ref
-          .read(packageCreateControllerProvider.notifier)
+          .read(packageEditControllerProvider.notifier)
           .loadEditablePackages(userId);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(packageCreateControllerProvider);
-    final ctrl = ref.read(packageCreateControllerProvider.notifier);
+    final state = ref.watch(packageEditControllerProvider);
+    final ctrl = ref.read(packageEditControllerProvider.notifier);
     final userId = ref.watch(userControllerProvider)?.userId ?? '';
 
     return AppCard(
@@ -72,8 +72,8 @@ class _EditPackageSelectStepState extends ConsumerState<EditPackageSelectStep> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _EditablePackageTile(
                     package: package,
-                    selected: state.selectedEditPackageId == package.packageId,
-                    onTap: () => ctrl.setEditPackage(package.packageId),
+                    selected: state.selectedPackageId == package.packageId,
+                    onTap: () => ctrl.selectPackage(package.packageId),
                   ),
                 ),
               ),
