@@ -131,6 +131,8 @@ class _StepButtonState extends ConsumerState<StepButton> {
   }
 
   void _submit(BuildContext context, WidgetRef ref) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
     final flowCtrl = ref.read(createFlowControllerProvider.notifier);
     final flow = ref.read(createFlowControllerProvider);
     final packageCtrl = ref.read(packageCreateControllerProvider.notifier);
@@ -143,9 +145,9 @@ class _StepButtonState extends ConsumerState<StepButton> {
             .read(packageCreateControllerProvider)
             .probingDurationStoryIds
             .isNotEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('音檔時長解析中，完成後才能發布')));
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('音檔時長解析中，完成後才能發布')),
+      );
       return;
     }
 
@@ -155,9 +157,9 @@ class _StepButtonState extends ConsumerState<StepButton> {
             .read(singleCreateControllerProvider)
             .probingDurationAudioIds
             .isNotEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('音檔時長解析中，完成後才能發布')));
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('音檔時長解析中，完成後才能發布')),
+      );
       return;
     }
 
@@ -175,6 +177,9 @@ class _StepButtonState extends ConsumerState<StepButton> {
       );
     }
 
+    final submittedFlowType = flow.flowType;
+    var submittedSuccessfully = false;
+
     try {
       if (flow.flowType == CreateFlowType.editPackage) {
         await _submitEditPackage(
@@ -182,44 +187,39 @@ class _StepButtonState extends ConsumerState<StepButton> {
           ref.read(packageCreateControllerProvider),
           ref.read(packageEditControllerProvider).selectedPackageId,
         );
-        if (!mounted) return;
-        packageCtrl.clear();
-        packageEditCtrl.clear();
       } else if (flow.flowType == CreateFlowType.package) {
         await _submitPackage(
           flowCtrl,
           ref.read(packageCreateControllerProvider),
           ref.read(userControllerProvider)?.userId ?? '',
         );
-        if (!mounted) return;
-        packageCtrl.clear();
       } else {
         await _submitSingle(flowCtrl, ref.read(singleCreateControllerProvider));
-        if (!mounted) return;
-        singleCtrl.clear();
       }
 
-      if (!mounted) return;
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('已提交發布')));
-      }
+      submittedSuccessfully = true;
+      scaffoldMessenger.showSnackBar(const SnackBar(content: Text('已提交發布')));
     } catch (e, st) {
       debugPrint('發布失敗：$e');
       debugPrint(st.toString());
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('發布失敗：$e')));
-      }
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text('發布失敗：$e')));
     } finally {
-      if (mounted) {
-        flowCtrl.clearUploadQueue();
-        flowCtrl.clear();
-        if (context.mounted) {
-          GoRouter.of(context).go('/publish/0');
+      flowCtrl.clearUploadQueue();
+
+      if (submittedSuccessfully) {
+        router.go('/publish/0');
+      }
+
+      if (submittedSuccessfully) {
+        if (submittedFlowType == CreateFlowType.editPackage) {
+          packageCtrl.clear();
+          packageEditCtrl.clear();
+        } else if (submittedFlowType == CreateFlowType.package) {
+          packageCtrl.clear();
+        } else {
+          singleCtrl.clear();
         }
+        flowCtrl.clear();
       }
     }
   }

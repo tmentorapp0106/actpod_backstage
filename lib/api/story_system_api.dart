@@ -99,18 +99,11 @@ class StoryApi {
       "packageImageUrl": packageImageUrl,
       "packagePrices": packagePrices.map((price) => price.toJson()).toList(),
     };
-    print("update package:");
-    print(data);
-
-    return const UpdatePackageResponse(
-      code: '200',
-      message: 'mock success',
+    final response = await DioClient.handelPostWithToken(
+      "/story/package/update",
+      data,
     );
-    // final response = await DioClient.handelPostWithToken(
-    //   "/story/package/update",
-    //   data,
-    // );
-    // return UpdatePackageResponse.fromResponse(response);
+    return UpdatePackageResponse.fromResponse(response);
   }
 
   Future<CreatePackageStoryResponse> createPackageStory(
@@ -175,17 +168,11 @@ class StoryApi {
       "packageNote": packageNote,
       "updateStory": updateStory,
     };
-    print("update package story:");
-    print(data);
-    return const UpdatePackageStoryResponse(
-      code: '200',
-      message: 'mock success',
-    );
 
-    // final response = await DioClient.handelPostWithToken(
-    //   "/story/package/story/update",
-    //   data,
-    // );
-    // return UpdatePackageStoryResponse.fromResponse(response);
+    final response = await DioClient.handelPostWithToken(
+      "/story/package/story/update",
+      data,
+    );
+    return UpdatePackageStoryResponse.fromResponse(response);
   }
 }
