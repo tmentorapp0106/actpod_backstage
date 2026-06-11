@@ -109,7 +109,6 @@ class PremiumPackage {
   final String channelId;
   final String spaceId;
   final String packageType;
-  final List<PackagePrice> packagePrices;
   final DateTime? createTime;
   final DateTime? updateTime;
 
@@ -122,7 +121,6 @@ class PremiumPackage {
     required this.channelId,
     required this.spaceId,
     required this.packageType,
-    required this.packagePrices,
     required this.createTime,
     required this.updateTime,
   });
@@ -137,7 +135,6 @@ class PremiumPackage {
       channelId: _string(json['channelId']),
       spaceId: _string(json['spaceId']),
       packageType: _string(json['packageType']),
-      packagePrices: _packagePrices(json['packagePrices']),
       createTime: _dateTime(json['createTime']),
       updateTime: _dateTime(json['updateTime']),
     );

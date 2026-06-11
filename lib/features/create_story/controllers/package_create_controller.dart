@@ -15,7 +15,6 @@ const _unset = Object();
 class PackagePriceDraft {
   final String id;
   final String packagePriceId;
-  final String priceType;
   final String lable;
   final int podcoins;
   final int twd;
@@ -24,19 +23,17 @@ class PackagePriceDraft {
   const PackagePriceDraft({
     required this.id,
     this.packagePriceId = '',
-    required this.priceType,
     required this.lable,
     this.podcoins = 0,
     this.twd = 0,
     this.isActive = true,
   });
 
-  bool get isComplete => priceType.isNotEmpty && lable.trim().isNotEmpty;
+  bool get isComplete => lable.trim().isNotEmpty;
 
   Map<String, dynamic> toJson() {
     return {
       if (packagePriceId.isNotEmpty) 'packagePriceId': packagePriceId,
-      'priceType': priceType,
       'lable': lable,
       'podcoins': podcoins,
       'twd': twd,
@@ -55,7 +52,6 @@ class PackagePriceDraft {
     return PackagePriceDraft(
       id: id,
       packagePriceId: packagePriceId ?? this.packagePriceId,
-      priceType: priceType ?? this.priceType,
       lable: lable ?? this.lable,
       podcoins: podcoins ?? this.podcoins,
       twd: twd ?? this.twd,
@@ -71,6 +67,10 @@ class PackageStoryDraft {
   final String title;
   final String description;
   final String packageNote;
+  final String? selectedSpace;
+  final String? selectedChannel;
+  final int podcoins;
+  final int twd;
   final UploadedAudio? audio;
   final String contentUrl;
   final String originalContentUrl;
@@ -80,6 +80,7 @@ class PackageStoryDraft {
   final int previewEndAt;
   final String collaboratorId;
   final String storyStatus;
+  final String nickname;
   final List<String> imageFilePaths;
   final List<Uint8List> imageFilesBytes;
 
@@ -89,6 +90,10 @@ class PackageStoryDraft {
     this.title = '',
     this.description = '',
     this.packageNote = '',
+    this.selectedSpace,
+    this.selectedChannel,
+    this.podcoins = 0,
+    this.twd = 0,
     this.audio,
     this.contentUrl = '',
     this.originalContentUrl = '',
@@ -98,6 +103,7 @@ class PackageStoryDraft {
     this.previewEndAt = 0,
     this.collaboratorId = '',
     this.storyStatus = '',
+    this.nickname = '',
     this.imageFilePaths = const [],
     this.imageFilesBytes = const [],
   });
@@ -115,6 +121,8 @@ class PackageStoryDraft {
   bool get isComplete {
     return title.trim().isNotEmpty &&
         description.trim().isNotEmpty &&
+        (selectedSpace != null && selectedSpace!.isNotEmpty) &&
+        (selectedChannel != null && selectedChannel!.isNotEmpty) &&
         hasImages;
   }
 
@@ -123,6 +131,10 @@ class PackageStoryDraft {
     String? title,
     String? description,
     String? packageNote,
+    String? selectedSpace,
+    String? selectedChannel,
+    int? podcoins,
+    int? twd,
     Object? audio = _unset,
     String? contentUrl,
     String? originalContentUrl,
@@ -132,6 +144,8 @@ class PackageStoryDraft {
     int? previewEndAt,
     String? collaboratorId,
     String? storyStatus,
+    String? nickname,
+    String? avatarUrl,
     List<String>? imageFilePaths,
     List<Uint8List>? imageFilesBytes,
   }) {
@@ -141,6 +155,10 @@ class PackageStoryDraft {
       title: title ?? this.title,
       description: description ?? this.description,
       packageNote: packageNote ?? this.packageNote,
+      selectedSpace: selectedSpace ?? this.selectedSpace,
+      selectedChannel: selectedChannel ?? this.selectedChannel,
+      podcoins: podcoins ?? this.podcoins,
+      twd: twd ?? this.twd,
       audio: audio == _unset ? this.audio : audio as UploadedAudio?,
       contentUrl: contentUrl ?? this.contentUrl,
       originalContentUrl: originalContentUrl ?? this.originalContentUrl,
@@ -150,6 +168,7 @@ class PackageStoryDraft {
       previewEndAt: previewEndAt ?? this.previewEndAt,
       collaboratorId: collaboratorId ?? this.collaboratorId,
       storyStatus: storyStatus ?? this.storyStatus,
+      nickname: nickname ?? this.nickname,
       imageFilePaths: imageFilePaths ?? this.imageFilePaths,
       imageFilesBytes: imageFilesBytes ?? this.imageFilesBytes,
     );
@@ -183,16 +202,7 @@ class PackageCreateState {
     this.packageImageUrl,
     this.packageImageBytes,
     this.packagePrices = const [
-      PackagePriceDraft(
-        id: 'package_default',
-        priceType: 'package',
-        lable: '整套價格',
-      ),
-      PackagePriceDraft(
-        id: 'single_default',
-        priceType: 'single',
-        lable: '單集價格',
-      ),
+      PackagePriceDraft(id: 'package_default', lable: '整套價格'),
     ],
     this.spaces = const [],
     this.selectedSpace,
@@ -212,8 +222,6 @@ class PackageCreateState {
         (packageDescription != null && packageDescription!.trim().isNotEmpty) &&
         (packageImageBytes != null ||
             (packageImageUrl != null && packageImageUrl!.isNotEmpty)) &&
-        (selectedSpace != null && selectedSpace!.isNotEmpty) &&
-        (selectedChannel != null && selectedChannel!.isNotEmpty) &&
         packagePrices.isNotEmpty &&
         packagePrices.every((price) => price.isComplete);
   }
@@ -305,8 +313,6 @@ class PackageCreateController extends Notifier<PackageCreateState> {
       packageImagePath: packageInfo.packageImageUrl.isEmpty ? null : '目前封面',
       packageImageUrl: packageInfo.packageImageUrl,
       packageImageBytes: null,
-      selectedSpace: packageInfo.spaceName,
-      selectedChannel: packageInfo.channelName,
       packagePrices: [
         for (final price in packageInfo.packagePrices)
           PackagePriceDraft(
@@ -314,7 +320,6 @@ class PackageCreateController extends Notifier<PackageCreateState> {
                 ? _genId('price')
                 : price.packagePriceId,
             packagePriceId: price.packagePriceId,
-            priceType: price.priceType,
             lable: price.lable,
             podcoins: price.podcoins,
             twd: price.twd,
@@ -329,6 +334,8 @@ class PackageCreateController extends Notifier<PackageCreateState> {
             title: story.storyName,
             description: story.storyDescription,
             packageNote: story.packageNote,
+            selectedSpace: story.spaceName,
+            selectedChannel: story.channelName,
             contentUrl: story.storyUrl,
             originalContentUrl: story.storyUrl,
             remoteImageUrls: story.storyImageUrls,
@@ -337,6 +344,7 @@ class PackageCreateController extends Notifier<PackageCreateState> {
             previewEndAt: story.previewEndAt,
             collaboratorId: story.collaborator,
             storyStatus: story.storyStatus,
+            nickname: story.nickname,
           ),
       ],
       error: null,
@@ -347,7 +355,7 @@ class PackageCreateController extends Notifier<PackageCreateState> {
     state = state.copyWith(
       packagePrices: [
         ...state.packagePrices,
-        PackagePriceDraft(id: _genId('price'), priceType: 'package', lable: ''),
+        PackagePriceDraft(id: _genId('price'), lable: ''),
       ],
     );
   }
@@ -434,6 +442,22 @@ class PackageCreateController extends Notifier<PackageCreateState> {
 
   void setStoryPackageNote(String storyId, String packageNote) {
     _updateStory(storyId, (story) => story.copyWith(packageNote: packageNote));
+  }
+
+  void setStorySpace(String storyId, String? space) {
+    _updateStory(storyId, (story) => story.copyWith(selectedSpace: space));
+  }
+
+  void setStoryChannel(String storyId, String? channel) {
+    _updateStory(storyId, (story) => story.copyWith(selectedChannel: channel));
+  }
+
+  void setStoryPodcoins(String storyId, int podcoins) {
+    _updateStory(storyId, (story) => story.copyWith(podcoins: podcoins));
+  }
+
+  void setStoryTwd(String storyId, int twd) {
+    _updateStory(storyId, (story) => story.copyWith(twd: twd));
   }
 
   void clearStoryAudio(String storyId) {

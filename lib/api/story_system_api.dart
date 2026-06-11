@@ -50,7 +50,8 @@ class StoryApi {
       "previewEndAt": previewEndAt,
       "voiceMessageStatus": voiceMessageStatus,
       "isPremium": isPremium,
-      "price": price,
+      "podcoins": price,
+      "twd": price,
       "collaboratorId": collaboratorId,
       "releaseTime": releaseTime?.toUtc().toIso8601String(),
     };
@@ -116,6 +117,8 @@ class StoryApi {
     String channelId,
     String spaceId,
     String? collaboratorId,
+    int podcoins,
+    int twd,
   ) async {
     var data = {
       "packageId": packageId,
@@ -130,6 +133,8 @@ class StoryApi {
       "collaboratorId": collaboratorId,
       "channelId": channelId,
       "spaceId": spaceId,
+      "podcoins": podcoins,
+      "twd": twd,
       "packageNote": packageNote,
     };
 

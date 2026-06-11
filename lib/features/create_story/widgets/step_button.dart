@@ -259,7 +259,6 @@ class _StepButtonState extends ConsumerState<StepButton> {
     String userId,
   ) async {
     final uploadedStories = <_UploadedPackageStory>[];
-    final ids = _selectedPackageIds(state);
     final packageImageResponse = await _runUploadStep(
       flowCtrl,
       'package-image',
@@ -283,14 +282,13 @@ class _StepButtonState extends ConsumerState<StepButton> {
         state.packageName!,
         state.packageDescription!,
         packageImageResponse.publicUrl,
-        ids.spaceId,
-        ids.channelId,
         state.packagePrices,
       ),
     );
 
     for (var i = 0; i < uploadedStories.length; i++) {
       final uploadedStory = uploadedStories[i];
+      final ids = _selectedPackageStoryIds(state, uploadedStory);
       await _runUploadStep(
         flowCtrl,
         'package-story-create-$i',
@@ -305,7 +303,11 @@ class _StepButtonState extends ConsumerState<StepButton> {
           _previewEnd(uploadedStory.duration),
           "enable",
           uploadedStory.packageNote,
+          ids.channelId,
+          ids.spaceId,
           null,
+          uploadedStory.podcoins,
+          uploadedStory.twd,
         ),
       );
     }
@@ -374,6 +376,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
           ),
         );
       } else {
+        final ids = _selectedPackageStoryIds(state, uploadedStory);
         await _runUploadStep(
           flowCtrl,
           'package-story-create-$i',
@@ -388,7 +391,11 @@ class _StepButtonState extends ConsumerState<StepButton> {
             _previewEnd(uploadedStory.duration),
             "enable",
             uploadedStory.packageNote,
+            ids.channelId,
+            ids.spaceId,
             story.collaboratorId.isEmpty ? null : story.collaboratorId,
+            uploadedStory.podcoins,
+            uploadedStory.twd,
           ),
         );
       }
@@ -476,6 +483,10 @@ class _StepButtonState extends ConsumerState<StepButton> {
       title: story.title,
       description: story.description,
       packageNote: story.packageNote,
+      selectedSpace: story.selectedSpace,
+      selectedChannel: story.selectedChannel,
+      podcoins: story.podcoins,
+      twd: story.twd,
       contentUrl: contentUrl,
       imageUrls: imageUrls,
       duration: duration,
@@ -529,6 +540,10 @@ class _StepButtonState extends ConsumerState<StepButton> {
       title: story.title,
       description: story.description,
       packageNote: story.packageNote,
+      selectedSpace: story.selectedSpace,
+      selectedChannel: story.selectedChannel,
+      podcoins: story.podcoins,
+      twd: story.twd,
       contentUrl: contentUrl,
       imageUrls: imageUrls,
       duration: duration,
@@ -682,13 +697,16 @@ class _StepButtonState extends ConsumerState<StepButton> {
     return _SelectedIds(spaceId: spaceId, channelId: channelId);
   }
 
-  _SelectedIds _selectedPackageIds(PackageCreateState state) {
+  _SelectedIds _selectedPackageStoryIds(
+    PackageCreateState state,
+    _UploadedPackageStory story,
+  ) {
     final spaceId = state.spaces
-        .where((space) => space.name == state.selectedSpace)
+        .where((space) => space.name == story.selectedSpace)
         .first
         .spaceId;
     final channelId = state.channels
-        .where((channel) => channel.channelName == state.selectedChannel)
+        .where((channel) => channel.channelName == story.selectedChannel)
         .first
         .channelId;
     return _SelectedIds(spaceId: spaceId, channelId: channelId);
@@ -956,8 +974,6 @@ class _StepButtonState extends ConsumerState<StepButton> {
     String packageName,
     String packageDescription,
     String packageImageUrl,
-    String spaceId,
-    String channelId,
     List<PackagePriceDraft> packagePrices,
   ) async {
     if (!_useMockUpload) {
@@ -966,13 +982,11 @@ class _StepButtonState extends ConsumerState<StepButton> {
         packageName,
         packageDescription,
         packageImageUrl,
-        spaceId,
-        channelId,
         packagePrices
             .map(
               (price) => PackagePrice(
                 packagePriceId: '',
-                priceType: price.priceType,
+                priceType: "package",
                 lable: price.lable,
                 podcoins: price.podcoins,
                 twd: price.twd,
@@ -1001,7 +1015,11 @@ class _StepButtonState extends ConsumerState<StepButton> {
     int previewEndAt,
     String voiceMessageStatus,
     String packageNote,
+    String channelId,
+    String spaceId,
     String? collaboratorId,
+    int podcoins,
+    int twd,
   ) async {
     if (!_useMockUpload) {
       return StoryApi().createPackageStory(
@@ -1015,7 +1033,11 @@ class _StepButtonState extends ConsumerState<StepButton> {
         previewEndAt,
         voiceMessageStatus,
         packageNote,
+        channelId,
+        spaceId,
         collaboratorId,
+        podcoins,
+        twd,
       );
     }
     await Future.delayed(const Duration(milliseconds: 1200));
@@ -1043,7 +1065,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
             .map(
               (price) => PackagePrice(
                 packagePriceId: price.packagePriceId,
-                priceType: price.priceType,
+                priceType: "package",
                 lable: price.lable,
                 podcoins: price.podcoins,
                 twd: price.twd,
@@ -1134,6 +1156,10 @@ class _UploadedPackageStory {
   final String title;
   final String description;
   final String packageNote;
+  final String? selectedSpace;
+  final String? selectedChannel;
+  final int podcoins;
+  final int twd;
   final String contentUrl;
   final List<String> imageUrls;
   final Duration duration;
@@ -1144,6 +1170,10 @@ class _UploadedPackageStory {
     required this.title,
     required this.description,
     required this.packageNote,
+    required this.selectedSpace,
+    required this.selectedChannel,
+    required this.podcoins,
+    required this.twd,
     required this.contentUrl,
     required this.imageUrls,
     required this.duration,

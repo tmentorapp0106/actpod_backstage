@@ -28,7 +28,7 @@ class _PreviewStepState extends ConsumerState<PreviewStep> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(singleCreateControllerProvider);
-    final userName = ref.read(userControllerProvider)?.name;
+    final user = ref.read(userControllerProvider);
 
     // --- 依你的 CreateState 欄位替換以下對應 ---
     final title = (state.title ?? '').trim(); // ex: state.title
@@ -36,9 +36,20 @@ class _PreviewStepState extends ConsumerState<PreviewStep> {
         .trim(); // ex: state.description
     final channelName =
         (state.selectedChannel ?? '未選擇頻道'); // ex: state.selectedChannelName
+    final channelImageUrl = _channelImageUrlFor(
+      state.channels,
+      state.selectedChannel,
+    );
+    final authorName =
+        _channelNicknameFor(state.channels, state.selectedChannel).isNotEmpty
+        ? _channelNicknameFor(state.channels, state.selectedChannel)
+        : user?.name ?? '';
+    final authorAvatarUrl =
+        _channelAvatarUrlFor(state.channels, state.selectedChannel).isNotEmpty
+        ? _channelAvatarUrlFor(state.channels, state.selectedChannel)
+        : user?.avatarUrl ?? '';
     final selectedSpace =
         (state.selectedSpace ?? '未選擇頻道'); // ex: state.selectedChannelName
-    final authorName = userName ?? ''; // 若沒有可留空
     final coverUrl = ''; // ex: state.coverUrl
     final scheduledAt = state.scheduledAt; // ex: state.scheduledAt
     final isScheduled = state.publishMode == PublishMode.schedule;
@@ -60,8 +71,10 @@ class _PreviewStepState extends ConsumerState<PreviewStep> {
           title: title.isNotEmpty ? title : '（未命名）',
           description: description.isNotEmpty ? description : '（尚未輸入描述）',
           channelName: channelName,
+          channelImageUrl: channelImageUrl,
           selectedSpace: selectedSpace,
           authorName: authorName.isNotEmpty ? authorName : '作者',
+          authorAvatarUrl: authorAvatarUrl,
           coverUrl: coverUrl,
           imageBytes: state.imageFilesBytes!.first,
           storyLength: state.selectedAudio?.duration ?? Duration.zero,
@@ -88,7 +101,9 @@ class _StoryCardPreview extends StatelessWidget {
   final String description;
   final String selectedSpace;
   final String channelName;
+  final String channelImageUrl;
   final String authorName;
+  final String authorAvatarUrl;
   final String? coverUrl;
   final DateTime dateTime;
   final int listens;
@@ -102,7 +117,9 @@ class _StoryCardPreview extends StatelessWidget {
     required this.description,
     required this.selectedSpace,
     required this.channelName,
+    required this.channelImageUrl,
     required this.authorName,
+    required this.authorAvatarUrl,
     required this.dateTime,
     required this.imageBytes,
     required this.storyLength,
@@ -188,13 +205,13 @@ class _StoryCardPreview extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 8),
-                      _LineMeta(
-                        icon: Icons.podcasts_rounded,
+                      _ChannelMeta(
+                        imageUrl: channelImageUrl,
                         text: channelName,
                       ),
                       const SizedBox(height: 4),
                       if (authorName.isNotEmpty)
-                        _LineMeta(icon: Icons.person_rounded, text: authorName),
+                        _UserMeta(imageUrl: authorAvatarUrl, text: authorName),
                       const SizedBox(height: 4),
                       _LineMeta(
                         icon: Icons.timer_outlined,
@@ -280,6 +297,36 @@ class _StoryCardPreview extends StatelessWidget {
   }
 }
 
+String _channelImageUrlFor(List channels, String? channelName) {
+  if (channelName == null || channelName.isEmpty) return '';
+  for (final channel in channels) {
+    if (channel.channelName == channelName) {
+      return channel.channelImageUrl;
+    }
+  }
+  return '';
+}
+
+String _channelNicknameFor(List channels, String? channelName) {
+  if (channelName == null || channelName.isEmpty) return '';
+  for (final channel in channels) {
+    if (channel.channelName == channelName) {
+      return channel.nickname;
+    }
+  }
+  return '';
+}
+
+String _channelAvatarUrlFor(List channels, String? channelName) {
+  if (channelName == null || channelName.isEmpty) return '';
+  for (final channel in channels) {
+    if (channel.channelName == channelName) {
+      return channel.userAvatarUrl;
+    }
+  }
+  return '';
+}
+
 String _fmtDuration(Duration duration) {
   if (duration == Duration.zero) return '--:--';
   final mm = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -293,6 +340,82 @@ String _fmt(DateTime dt) {
   final m = dt.month.toString().padLeft(2, '0');
   final d = dt.day.toString().padLeft(2, '0');
   return '$y-$m-$d';
+}
+
+class _ChannelMeta extends StatelessWidget {
+  final String imageUrl;
+  final String text;
+
+  const _ChannelMeta({required this.imageUrl, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        ClipOval(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: imageUrl.trim().isEmpty
+                ? const Icon(
+                    Icons.podcasts_rounded,
+                    size: 16,
+                    color: Colors.black45,
+                  )
+                : Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.podcasts_rounded,
+                      size: 16,
+                      color: Colors.black45,
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(text, style: const TextStyle(color: Colors.black87)),
+      ],
+    );
+  }
+}
+
+class _UserMeta extends StatelessWidget {
+  final String imageUrl;
+  final String text;
+
+  const _UserMeta({required this.imageUrl, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        ClipOval(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: imageUrl.trim().isEmpty
+                ? const Icon(
+                    Icons.account_circle,
+                    size: 16,
+                    color: Colors.black45,
+                  )
+                : Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.account_circle,
+                      size: 16,
+                      color: Colors.black45,
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(text, style: const TextStyle(color: Colors.black87)),
+      ],
+    );
+  }
 }
 
 /// 行內元素 & Tag

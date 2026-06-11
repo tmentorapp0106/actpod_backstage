@@ -63,9 +63,6 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
     final state = ref.watch(packageCreateControllerProvider);
     final editState = ref.watch(packageEditControllerProvider);
     final ctrl = ref.read(packageCreateControllerProvider.notifier);
-    final isEditPackage =
-        ref.watch(createFlowControllerProvider).flowType ==
-        CreateFlowType.editPackage;
 
     return AppCard(
       child: Padding(
@@ -117,39 +114,6 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
             ),
             const SizedBox(height: 16),
             _PackageImagePicker(state: state, ctrl: ctrl),
-            const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final spaceField = _SpaceField(
-                  state: state,
-                  ctrl: ctrl,
-                  enabled: !isEditPackage,
-                );
-                final channelField = _ChannelField(
-                  state: state,
-                  ctrl: ctrl,
-                  enabled: !isEditPackage,
-                );
-
-                if (constraints.maxWidth >= 720) {
-                  return Row(
-                    children: [
-                      Expanded(child: spaceField),
-                      const SizedBox(width: 16),
-                      Expanded(child: channelField),
-                    ],
-                  );
-                }
-
-                return Column(
-                  children: [
-                    spaceField,
-                    const SizedBox(height: 12),
-                    channelField,
-                  ],
-                );
-              },
-            ),
             const SizedBox(height: 16),
             _PackagePricesEditor(state: state, ctrl: ctrl),
           ],
@@ -241,74 +205,6 @@ class _PackageImagePicker extends StatelessWidget {
   }
 }
 
-class _SpaceField extends StatelessWidget {
-  final PackageCreateState state;
-  final PackageCreateController ctrl;
-  final bool enabled;
-
-  const _SpaceField({
-    required this.state,
-    required this.ctrl,
-    required this.enabled,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      key: ValueKey('space_${state.selectedSpace ?? ''}'),
-      initialValue: state.selectedSpace,
-      items: state.spaces
-          .map(
-            (space) => DropdownMenuItem<String>(
-              value: space.name,
-              child: Text(space.name),
-            ),
-          )
-          .toList(),
-      onChanged: enabled ? ctrl.setSpace : null,
-      decoration: const InputDecoration(
-        labelText: '套裝 Space',
-        border: OutlineInputBorder(),
-        isDense: true,
-      ),
-    );
-  }
-}
-
-class _ChannelField extends StatelessWidget {
-  final PackageCreateState state;
-  final PackageCreateController ctrl;
-  final bool enabled;
-
-  const _ChannelField({
-    required this.state,
-    required this.ctrl,
-    required this.enabled,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      key: ValueKey('channel_${state.selectedChannel ?? ''}'),
-      initialValue: state.selectedChannel,
-      items: state.channels
-          .map(
-            (channel) => DropdownMenuItem<String>(
-              value: channel.channelName,
-              child: Text(channel.channelName),
-            ),
-          )
-          .toList(),
-      onChanged: enabled ? ctrl.setChannel : null,
-      decoration: const InputDecoration(
-        labelText: '套裝 Channel',
-        border: OutlineInputBorder(),
-        isDense: true,
-      ),
-    );
-  }
-}
-
 class _PackagePricesEditor extends StatelessWidget {
   final PackageCreateState state;
   final PackageCreateController ctrl;
@@ -375,21 +271,21 @@ class _PackagePriceRow extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final fields = [
-            DropdownButtonFormField<String>(
-              initialValue: price.priceType,
-              items: const [
-                DropdownMenuItem(value: 'package', child: Text('整套購買')),
-                DropdownMenuItem(value: 'single', child: Text('單集購買')),
-              ],
-              onChanged: (value) {
-                if (value != null) ctrl.setPackagePriceType(price.id, value);
-              },
-              decoration: const InputDecoration(
-                labelText: '購買類型',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-            ),
+            // DropdownButtonFormField<String>(
+            //   initialValue: price.priceType,
+            //   items: const [
+            //     DropdownMenuItem(value: 'package', child: Text('整套購買')),
+            //     DropdownMenuItem(value: 'single', child: Text('單集購買')),
+            //   ],
+            //   onChanged: (value) {
+            //     if (value != null) ctrl.setPackagePriceType(price.id, value);
+            //   },
+            //   decoration: const InputDecoration(
+            //     labelText: '購買類型',
+            //     border: OutlineInputBorder(),
+            //     isDense: true,
+            //   ),
+            // ),
             TextFormField(
               key: ValueKey('${price.id}_lable'),
               initialValue: price.lable,

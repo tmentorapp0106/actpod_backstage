@@ -157,22 +157,6 @@ class _EditablePackageTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Colors.black54, height: 1.35),
                   ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: [
-                      Chip(
-                        label: Text('${package.packagePrices.length} 個價格'),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      if (package.packageType.isNotEmpty)
-                        Chip(
-                          label: Text(package.packageType),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                    ],
-                  ),
                 ],
               ),
             ),

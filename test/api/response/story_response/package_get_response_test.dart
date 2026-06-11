@@ -137,8 +137,6 @@ void main() {
       expect(response.code, '200');
       expect(response.packages, hasLength(1));
       expect(response.packages.single.packageId, 'package-1');
-      expect(response.packages.single.packagePrices.single.priceType, 'single');
-      expect(response.packages.single.packagePrices.single.isActive, isFalse);
       expect(response.packages.single.updateTime, isNull);
     });
 

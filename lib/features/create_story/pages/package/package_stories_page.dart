@@ -34,7 +34,7 @@ class PackageStoriesStep extends ConsumerWidget {
                       ),
                       SizedBox(height: 6),
                       Text(
-                        '新增多個故事，所有故事都會使用前一步選好的 Space 與 Channel。',
+                        '新增多個故事，並為每個故事選擇 Space 與 Channel。',
                         style: TextStyle(color: Colors.black54),
                       ),
                     ],
@@ -197,6 +197,75 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
               ),
             ),
             const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final spaceField = _StorySpaceField(
+                  state: state,
+                  story: story,
+                  ctrl: ctrl,
+                  enabled: !story.isExisting,
+                );
+                final channelField = _StoryChannelField(
+                  state: state,
+                  story: story,
+                  ctrl: ctrl,
+                  enabled: !story.isExisting,
+                );
+                final podcoinsField = _StoryNumberField(
+                  key: ValueKey('story_podcoins_${story.id}'),
+                  label: 'Podcoins',
+                  value: story.podcoins,
+                  enabled: !story.isExisting,
+                  onChanged: (value) => ctrl.setStoryPodcoins(
+                    story.id,
+                    _parseNonNegativeInt(value),
+                  ),
+                );
+                final twdField = _StoryNumberField(
+                  key: ValueKey('story_twd_${story.id}'),
+                  label: 'TWD',
+                  value: story.twd,
+                  enabled: !story.isExisting,
+                  onChanged: (value) =>
+                      ctrl.setStoryTwd(story.id, _parseNonNegativeInt(value)),
+                );
+
+                if (constraints.maxWidth >= 720) {
+                  return Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: spaceField),
+                          const SizedBox(width: 16),
+                          Expanded(child: channelField),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(child: podcoinsField),
+                          const SizedBox(width: 16),
+                          Expanded(child: twdField),
+                        ],
+                      ),
+                    ],
+                  );
+                }
+
+                return Column(
+                  children: [
+                    spaceField,
+                    const SizedBox(height: 12),
+                    channelField,
+                    const SizedBox(height: 12),
+                    podcoinsField,
+                    const SizedBox(height: 12),
+                    twdField,
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 12,
               runSpacing: 12,
@@ -248,10 +317,7 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
                         ),
                       ),
                       child: const Center(
-                        child: Icon(
-                          Icons.close_rounded,
-                          size: 12,
-                        ),
+                        child: Icon(Icons.close_rounded, size: 12),
                       ),
                     ),
                   ),
@@ -313,6 +379,117 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
     final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$mm:$ss';
   }
+}
+
+class _StorySpaceField extends StatelessWidget {
+  final PackageCreateState state;
+  final PackageStoryDraft story;
+  final PackageCreateController ctrl;
+  final bool enabled;
+
+  const _StorySpaceField({
+    required this.state,
+    required this.story,
+    required this.ctrl,
+    required this.enabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String>(
+      key: ValueKey('story_space_${story.id}_${story.selectedSpace ?? ''}'),
+      initialValue: story.selectedSpace,
+      items: state.spaces
+          .map(
+            (space) => DropdownMenuItem<String>(
+              value: space.name,
+              child: Text(space.name),
+            ),
+          )
+          .toList(),
+      onChanged: enabled
+          ? (value) => ctrl.setStorySpace(story.id, value)
+          : null,
+      decoration: const InputDecoration(
+        labelText: 'Story Space',
+        border: OutlineInputBorder(),
+        isDense: true,
+      ),
+    );
+  }
+}
+
+class _StoryChannelField extends StatelessWidget {
+  final PackageCreateState state;
+  final PackageStoryDraft story;
+  final PackageCreateController ctrl;
+  final bool enabled;
+
+  const _StoryChannelField({
+    required this.state,
+    required this.story,
+    required this.ctrl,
+    required this.enabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String>(
+      key: ValueKey('story_channel_${story.id}_${story.selectedChannel ?? ''}'),
+      initialValue: story.selectedChannel,
+      items: state.channels
+          .map(
+            (channel) => DropdownMenuItem<String>(
+              value: channel.channelName,
+              child: Text(channel.channelName),
+            ),
+          )
+          .toList(),
+      onChanged: enabled
+          ? (value) => ctrl.setStoryChannel(story.id, value)
+          : null,
+      decoration: const InputDecoration(
+        labelText: 'Story Channel',
+        border: OutlineInputBorder(),
+        isDense: true,
+      ),
+    );
+  }
+}
+
+class _StoryNumberField extends StatelessWidget {
+  final String label;
+  final int value;
+  final bool enabled;
+  final ValueChanged<String> onChanged;
+
+  const _StoryNumberField({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      initialValue: value.toString(),
+      enabled: enabled,
+      keyboardType: TextInputType.number,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        isDense: true,
+      ),
+    );
+  }
+}
+
+int _parseNonNegativeInt(String value) {
+  final parsed = int.tryParse(value.trim()) ?? 0;
+  return parsed < 0 ? 0 : parsed;
 }
 
 class _InlineLoading extends StatelessWidget {
