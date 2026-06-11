@@ -64,8 +64,6 @@ class StoryApi {
     String packageName,
     String packageDescription,
     String packageImageUrl,
-    String spaceId,
-    String channelId,
     List<PackagePrice> packagePrices,
   ) async {
     var data = {
@@ -73,8 +71,6 @@ class StoryApi {
       "packageName": packageName,
       "packageDescription": packageDescription,
       "packageImageUrl": packageImageUrl,
-      "spaceId": spaceId,
-      "channelId": channelId,
       "packagePrices": packagePrices.map((price) => price.toJson()).toList(),
     };
 
@@ -117,6 +113,8 @@ class StoryApi {
     int previewEndAt,
     String voiceMessageStatus,
     String packageNote,
+    String channelId,
+    String spaceId,
     String? collaboratorId,
   ) async {
     var data = {
@@ -130,6 +128,8 @@ class StoryApi {
       "previewEndAt": previewEndAt,
       "voiceMessageStatus": voiceMessageStatus,
       "collaboratorId": collaboratorId,
+      "channelId": channelId,
+      "spaceId": spaceId,
       "packageNote": packageNote,
     };
 
