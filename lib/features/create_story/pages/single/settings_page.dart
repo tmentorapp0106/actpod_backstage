@@ -3,12 +3,10 @@ import 'package:actpod_studio/features/create_story/controllers/create_shared_mo
 import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
 import 'package:actpod_studio/widgets/app_card.dart';
 import 'package:actpod_studio/widgets/avatar.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:interval_time_picker/interval_time_picker.dart';
 import 'package:interval_time_picker/models/visible_step.dart';
-import 'package:time_picker_spinner_pop_up/time_picker_spinner_pop_up.dart';
 
 class SettingsStep extends ConsumerWidget {
   final bool showPrice;
@@ -39,20 +37,21 @@ class SettingsStep extends ConsumerWidget {
         interval: 30,
         visibleStep: VisibleStep.thirtieths,
       );
-      if (time!.minute % 30 != 0) {
+      if (time == null) return;
+      if (time.minute % 30 != 0) {
         final adjustedMinute = (time.minute ~/ 30) * 30;
         timeMinute = adjustedMinute;
       } else {
         timeMinute = time.minute;
       }
       ctrl.setScheduledAt(
-        DateTime(date.year, date.month, date.day, time!.hour, timeMinute),
+        DateTime(date.year, date.month, date.day, time.hour, timeMinute),
       );
     }
 
     Future<void> addCollaborator() async {
       final controller = TextEditingController();
-      final ok = await showDialog<bool>(
+      await showDialog<bool>(
         context: context,
         builder: (_) => Consumer(
           builder: (context, ref, _) {
@@ -135,31 +134,41 @@ class SettingsStep extends ConsumerWidget {
             const SizedBox(height: 24),
 
             if (showPrice) ...[
-              const _SectionTitle('金額 (Podcoin)'),
+              const _SectionTitle('金額'),
               const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                value: state.pricePodcoin,
-                onChanged: (v) => ctrl.setPrice(v ?? 0),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('免費')),
-                  DropdownMenuItem(value: 10, child: Text('10 Podcoin')),
-                  DropdownMenuItem(value: 20, child: Text('20 Podcoin')),
-                  DropdownMenuItem(value: 30, child: Text('30 Podcoin')),
-                  DropdownMenuItem(value: 50, child: Text('50 Podcoin')),
-                  DropdownMenuItem(value: 100, child: Text('100 Podcoin')),
-                  DropdownMenuItem(value: 150, child: Text('150 Podcoin')),
-                  DropdownMenuItem(value: 200, child: Text('200 Podcoin')),
-                  DropdownMenuItem(value: 500, child: Text('500 Podcoin')),
-                ],
-                decoration: InputDecoration(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final podcoinsField = _PriceNumberField(
+                    key: const ValueKey('single_price_podcoins'),
+                    label: 'Podcoins',
+                    value: state.pricePodcoin,
+                    onChanged: ctrl.setPricePodcoin,
+                  );
+                  final twdField = _PriceNumberField(
+                    key: const ValueKey('single_price_twd'),
+                    label: 'TWD',
+                    value: state.priceTwd,
+                    onChanged: ctrl.setPriceTwd,
+                  );
+
+                  if (constraints.maxWidth >= 560) {
+                    return Row(
+                      children: [
+                        Expanded(child: podcoinsField),
+                        const SizedBox(width: 12),
+                        Expanded(child: twdField),
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      podcoinsField,
+                      const SizedBox(height: 12),
+                      twdField,
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 28),
             ],
@@ -282,6 +291,51 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+class _PriceNumberField extends StatelessWidget {
+  final String label;
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  const _PriceNumberField({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      initialValue: value.toString(),
+      keyboardType: TextInputType.number,
+      onChanged: (value) {
+        final digits = _normalizeDigits(value);
+        onChanged(int.tryParse(digits) ?? 0);
+      },
+      decoration: InputDecoration(
+        labelText: label,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+}
+
+String _normalizeDigits(String value) {
+  final buffer = StringBuffer();
+  for (final codeUnit in value.codeUnits) {
+    if (codeUnit >= 0x30 && codeUnit <= 0x39) {
+      buffer.writeCharCode(codeUnit);
+    } else if (codeUnit >= 0xff10 && codeUnit <= 0xff19) {
+      buffer.writeCharCode(codeUnit - 0xff10 + 0x30);
+    }
+  }
+  return buffer.toString();
+}
+
 class _ModeButton extends StatelessWidget {
   final String label;
   final bool selected;
@@ -289,7 +343,6 @@ class _ModeButton extends StatelessWidget {
   final ThemeData theme;
 
   const _ModeButton({
-    super.key,
     required this.label,
     required this.selected,
     required this.onTap,

@@ -81,6 +81,8 @@ class _PreviewStepState extends ConsumerState<PreviewStep> {
           isProbingStoryLength: state.probingDurationAudioIds.contains(
             state.selectedAudioId,
           ),
+          podcoins: state.pricePodcoin,
+          twd: state.priceTwd,
           // 若是排程則顯示排程時間，否則顯示現在（或你的建立時間）
           dateTime: isScheduled
               ? scheduledAt ?? DateTime.now()
@@ -111,6 +113,8 @@ class _StoryCardPreview extends StatelessWidget {
   final Uint8List imageBytes;
   final Duration storyLength;
   final bool isProbingStoryLength;
+  final int podcoins;
+  final int twd;
 
   const _StoryCardPreview({
     required this.title,
@@ -124,6 +128,8 @@ class _StoryCardPreview extends StatelessWidget {
     required this.imageBytes,
     required this.storyLength,
     required this.isProbingStoryLength,
+    required this.podcoins,
+    required this.twd,
     this.coverUrl,
     this.listens = 0,
     this.showNewBadge = false,
@@ -262,6 +268,26 @@ class _StoryCardPreview extends StatelessWidget {
                   style: const TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(width: 16),
+                if (podcoins > 0 || twd > 0) ...[
+                  Image.asset(
+                    'assets/images/podcoins.png',
+                    width: 20,
+                    height: 20,
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      _fmtPrice(podcoins, twd),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                ],
                 if (showNewBadge) ...[
                   Icon(Icons.bolt_rounded, size: 16, color: primary),
                   const SizedBox(width: 4),
@@ -332,6 +358,12 @@ String _fmtDuration(Duration duration) {
   final mm = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
   final ss = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
   return '$mm:$ss';
+}
+
+String _fmtPrice(int podcoins, int twd) {
+  if (podcoins > 0 && twd > 0) return '$podcoins Podcoins / NT\$$twd';
+  if (podcoins > 0) return '$podcoins Podcoins';
+  return 'NT\$$twd';
 }
 
 /// 超簡單日期格式（可換成 intl）

@@ -28,6 +28,7 @@ class SingleCreateState {
   final Duration selectionStart;
   final Duration selectionEnd;
   final int pricePodcoin;
+  final int priceTwd;
   final PublishMode publishMode;
   final DateTime? scheduledAt;
   final UserInfo? collaborator;
@@ -51,6 +52,7 @@ class SingleCreateState {
     this.selectionStart = Duration.zero,
     this.selectionEnd = const Duration(seconds: 20),
     this.pricePodcoin = 0,
+    this.priceTwd = 0,
     this.publishMode = PublishMode.now,
     this.scheduledAt,
     this.collaborator,
@@ -100,6 +102,7 @@ class SingleCreateState {
     Duration? selectionStart,
     Duration? selectionEnd,
     int? pricePodcoin,
+    int? priceTwd,
     PublishMode? publishMode,
     DateTime? scheduledAt,
     UserInfo? collaborator,
@@ -124,6 +127,7 @@ class SingleCreateState {
       selectionStart: selectionStart ?? this.selectionStart,
       selectionEnd: selectionEnd ?? this.selectionEnd,
       pricePodcoin: pricePodcoin ?? this.pricePodcoin,
+      priceTwd: priceTwd ?? this.priceTwd,
       publishMode: publishMode ?? this.publishMode,
       scheduledAt: scheduledAt ?? this.scheduledAt,
       collaborator: collaborator ?? this.collaborator,
@@ -155,7 +159,13 @@ class SingleCreateController extends Notifier<SingleCreateState> {
   void setDescription(String v) => state = state.copyWith(description: v);
   void setSpace(String? v) => state = state.copyWith(selectedSpace: v);
   void setChannel(String? v) => state = state.copyWith(selectedChannel: v);
-  void setPrice(int podcoin) => state = state.copyWith(pricePodcoin: podcoin);
+  void setPricePodcoin(int podcoin) {
+    state = state.copyWith(pricePodcoin: podcoin);
+  }
+
+  void setPriceTwd(int twd) {
+    state = state.copyWith(priceTwd: twd);
+  }
 
   void setLoadingAudio(bool isLoading) {
     state = state.copyWith(uploadingAudio: isLoading);

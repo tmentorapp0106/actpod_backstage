@@ -68,7 +68,8 @@ class StoryApi {
     int previewEndAt,
     String voiceMessageStatus,
     bool isPremium,
-    int price,
+    int podcoins,
+    int twd,
     String? collaboratorId,
     DateTime? releaseTime,
   ) async {
@@ -84,8 +85,8 @@ class StoryApi {
       "previewEndAt": previewEndAt,
       "voiceMessageStatus": voiceMessageStatus,
       "isPremium": isPremium,
-      "podcoins": price,
-      "twd": price,
+      "podcoins": podcoins,
+      "twd": twd,
       "collaboratorId": collaboratorId,
       "releaseTime": releaseTime?.toUtc().toIso8601String(),
     };
