@@ -14,3 +14,7 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+deploy command
+flutter build web --release --wasm --pwa-strategy=none
+firebase deploy --only "hosting:share-voice-77cc4" -> "firebase hosting:sites:list" to see hosting list
