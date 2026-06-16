@@ -306,26 +306,39 @@ class PackageCreateController extends Notifier<PackageCreateState> {
   void setSpace(String? v) => state = state.copyWith(selectedSpace: v);
   void setChannel(String? v) => state = state.copyWith(selectedChannel: v);
 
-  void applyPackageInfo(PackageInfo packageInfo) {
+  void applyPackageInfo(PackageInfo packageInfo, {List<Price>? prices}) {
+    final loadedPrices = prices ?? const <Price>[];
     state = state.copyWith(
       packageName: packageInfo.packageName,
       packageDescription: packageInfo.packageDescription,
       packageImagePath: packageInfo.packageImageUrl.isEmpty ? null : '目前封面',
       packageImageUrl: packageInfo.packageImageUrl,
       packageImageBytes: null,
-      packagePrices: [
-        for (final price in packageInfo.packagePrices)
-          PackagePriceDraft(
-            id: price.packagePriceId.isEmpty
-                ? _genId('price')
-                : price.packagePriceId,
-            packagePriceId: price.packagePriceId,
-            lable: price.lable,
-            podcoins: price.podcoins,
-            twd: price.twd,
-            isActive: price.isActive,
-          ),
-      ],
+      packagePrices: loadedPrices.isEmpty
+          ? [
+              for (final price in packageInfo.packagePrices)
+                PackagePriceDraft(
+                  id: price.packagePriceId.isEmpty
+                      ? _genId('price')
+                      : price.packagePriceId,
+                  packagePriceId: price.packagePriceId,
+                  lable: price.lable,
+                  podcoins: price.podcoins,
+                  twd: price.twd,
+                  isActive: price.isActive,
+                ),
+            ]
+          : [
+              for (final price in loadedPrices)
+                PackagePriceDraft(
+                  id: price.priceId.isEmpty ? _genId('price') : price.priceId,
+                  packagePriceId: price.priceId,
+                  lable: price.lable,
+                  podcoins: price.podcoins,
+                  twd: price.twd,
+                  isActive: price.isActive,
+                ),
+            ],
       stories: [
         for (final story in packageInfo.stories)
           PackageStoryDraft(

@@ -9,6 +9,40 @@ import 'package:actpod_studio/api/response/story_response/update_package_story.d
 import 'package:actpod_studio/api/response/story_response/upload_story.dart';
 
 class StoryApi {
+  Future<GetPackagePricesResponse> getPackagePrices(String packageId) async {
+    final response = await DioClient.handelGet(
+      "/story/price/package/$packageId",
+      {},
+    );
+    final body = response.data;
+    final json = body is Map<String, dynamic> ? body : <String, dynamic>{};
+    return GetPackagePricesResponse.fromJson(json);
+  }
+
+  Future<GetPackageActivePriceResponse> getPackageActivePrice(
+    String packageId,
+  ) async {
+    final response = await DioClient.handelGet(
+      "/story/price/package/active/$packageId",
+      {},
+    );
+    final body = response.data;
+    final json = body is Map<String, dynamic> ? body : <String, dynamic>{};
+    return GetPackageActivePriceResponse.fromJson(json);
+  }
+
+  Future<GetStoryActivePriceResponse> getStoryActivePrice(
+    String storyId,
+  ) async {
+    final response = await DioClient.handelGet(
+      "/story/price/story/active/$storyId",
+      {},
+    );
+    final body = response.data;
+    final json = body is Map<String, dynamic> ? body : <String, dynamic>{};
+    return GetStoryActivePriceResponse.fromJson(json);
+  }
+
   Future<GetPackageInfoResponse> getPackageInfo(String packageId) async {
     final response = await DioClient.handelGet("/story/package/$packageId", {});
     return GetPackageInfoResponse.fromResponse(response);

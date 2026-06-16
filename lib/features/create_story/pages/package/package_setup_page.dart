@@ -30,11 +30,14 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
         ref
             .read(packageEditControllerProvider.notifier)
             .loadSelectedPackageInfo()
-            .then((packageInfo) {
-              if (packageInfo == null) return;
+            .then((editData) {
+              if (editData == null) return;
               ref
                   .read(packageCreateControllerProvider.notifier)
-                  .applyPackageInfo(packageInfo);
+                  .applyPackageInfo(
+                    editData.packageInfo,
+                    prices: editData.prices,
+                  );
             });
       }
     });

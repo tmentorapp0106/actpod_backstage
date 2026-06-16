@@ -38,6 +38,124 @@ class PackagePrice {
   }
 }
 
+class Price {
+  final String priceId;
+  final String priceType;
+  final String storyId;
+  final String packageId;
+  final String lable;
+  final int podcoins;
+  final int twd;
+  final bool isActive;
+  final DateTime? createTime;
+  final DateTime? updateTime;
+
+  const Price({
+    required this.priceId,
+    required this.priceType,
+    required this.storyId,
+    required this.packageId,
+    required this.lable,
+    required this.podcoins,
+    required this.twd,
+    required this.isActive,
+    required this.createTime,
+    required this.updateTime,
+  });
+
+  factory Price.fromJson(Map<String, dynamic> json) {
+    return Price(
+      priceId: _string(json['priceId']),
+      priceType: _string(json['priceType']),
+      storyId: _string(json['storyId']),
+      packageId: _string(json['packageId']),
+      lable: _string(json['lable']),
+      podcoins: _int(json['podcoins']),
+      twd: _int(json['twd']),
+      isActive: _bool(json['isActive']),
+      createTime: _dateTime(json['createTime']),
+      updateTime: _dateTime(json['updateTime']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (priceId.isNotEmpty) 'priceId': priceId,
+      if (priceType.isNotEmpty) 'priceType': priceType,
+      if (storyId.isNotEmpty) 'storyId': storyId,
+      if (packageId.isNotEmpty) 'packageId': packageId,
+      'lable': lable,
+      'podcoins': podcoins,
+      'twd': twd,
+      'isActive': isActive,
+      if (createTime != null) 'createTime': createTime!.toIso8601String(),
+      if (updateTime != null) 'updateTime': updateTime!.toIso8601String(),
+    };
+  }
+}
+
+class GetPackagePricesResponse {
+  final String code;
+  final String message;
+  final List<Price> prices;
+
+  const GetPackagePricesResponse({
+    required this.code,
+    required this.message,
+    required this.prices,
+  });
+
+  factory GetPackagePricesResponse.fromJson(Map<String, dynamic> json) {
+    return GetPackagePricesResponse(
+      code: _string(json['code']),
+      message: _string(json['message']),
+      prices: _prices(json['data']),
+    );
+  }
+}
+
+class GetPackageActivePriceResponse {
+  final String code;
+  final String message;
+  final Price? price;
+
+  const GetPackageActivePriceResponse({
+    required this.code,
+    required this.message,
+    required this.price,
+  });
+
+  factory GetPackageActivePriceResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'];
+    return GetPackageActivePriceResponse(
+      code: _string(json['code']),
+      message: _string(json['message']),
+      price: data is Map<String, dynamic> ? Price.fromJson(data) : null,
+    );
+  }
+}
+
+class GetStoryActivePriceResponse {
+  final String code;
+  final String message;
+  final Price? price;
+
+  const GetStoryActivePriceResponse({
+    required this.code,
+    required this.message,
+    required this.price,
+  });
+
+  factory GetStoryActivePriceResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'];
+    return GetStoryActivePriceResponse(
+      code: _string(json['code']),
+      message: _string(json['message']),
+      price: data is Map<String, dynamic> ? Price.fromJson(data) : null,
+    );
+  }
+}
+
 class PackageInfo {
   final String packageId;
   final String userId;
@@ -46,7 +164,6 @@ class PackageInfo {
   final String packageImageUrl;
   final String channelId;
   final String spaceId;
-  final String packageType;
   final List<PackagePrice> packagePrices;
   final DateTime? createTime;
   final DateTime? updateTime;
@@ -65,7 +182,6 @@ class PackageInfo {
     required this.packageImageUrl,
     required this.channelId,
     required this.spaceId,
-    required this.packageType,
     required this.packagePrices,
     required this.createTime,
     required this.updateTime,
@@ -86,7 +202,6 @@ class PackageInfo {
       packageImageUrl: _string(json['packageImageUrl']),
       channelId: _string(json['channelId']),
       spaceId: _string(json['spaceId']),
-      packageType: _string(json['packageType']),
       packagePrices: _packagePrices(json['packagePrices']),
       createTime: _dateTime(json['createTime']),
       updateTime: _dateTime(json['updateTime']),
@@ -108,7 +223,6 @@ class PremiumPackage {
   final String packageImageUrl;
   final String channelId;
   final String spaceId;
-  final String packageType;
   final DateTime? createTime;
   final DateTime? updateTime;
 
@@ -120,7 +234,6 @@ class PremiumPackage {
     required this.packageImageUrl,
     required this.channelId,
     required this.spaceId,
-    required this.packageType,
     required this.createTime,
     required this.updateTime,
   });
@@ -134,7 +247,6 @@ class PremiumPackage {
       packageImageUrl: _string(json['packageImageUrl']),
       channelId: _string(json['channelId']),
       spaceId: _string(json['spaceId']),
-      packageType: _string(json['packageType']),
       createTime: _dateTime(json['createTime']),
       updateTime: _dateTime(json['updateTime']),
     );
@@ -281,6 +393,19 @@ List<PackagePrice> _packagePrices(dynamic value) {
   return value
       .whereType<Map<String, dynamic>>()
       .map(PackagePrice.fromJson)
+      .toList();
+}
+
+List<Price> _prices(dynamic value) {
+  final list = switch (value) {
+    List items => items,
+    {'prices': final List items} => items,
+    {'Prices': final List items} => items,
+    _ => const [],
+  };
+  return list
+      .whereType<Map>()
+      .map((json) => Price.fromJson(Map<String, dynamic>.from(json)))
       .toList();
 }
 

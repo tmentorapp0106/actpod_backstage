@@ -8,6 +8,7 @@ const _unset = Object();
 @immutable
 class PackageEditState {
   final List<PremiumPackage> editablePackages;
+  final List<Price> packagePrices;
   final bool loadingEditablePackages;
   final bool loadingPackageInfo;
   final String? selectedPackageId;
@@ -17,6 +18,7 @@ class PackageEditState {
 
   const PackageEditState({
     this.editablePackages = const [],
+    this.packagePrices = const [],
     this.loadingEditablePackages = false,
     this.loadingPackageInfo = false,
     this.selectedPackageId,
@@ -27,6 +29,7 @@ class PackageEditState {
 
   PackageEditState copyWith({
     List<PremiumPackage>? editablePackages,
+    List<Price>? packagePrices,
     bool? loadingEditablePackages,
     bool? loadingPackageInfo,
     Object? selectedPackageId = _unset,
@@ -36,6 +39,7 @@ class PackageEditState {
   }) {
     return PackageEditState(
       editablePackages: editablePackages ?? this.editablePackages,
+      packagePrices: packagePrices ?? this.packagePrices,
       loadingEditablePackages:
           loadingEditablePackages ?? this.loadingEditablePackages,
       loadingPackageInfo: loadingPackageInfo ?? this.loadingPackageInfo,
@@ -84,34 +88,57 @@ class PackageEditController extends Notifier<PackageEditState> {
       selectedPackageId: packageId,
       loadedPackageId: null,
       packageInfo: null,
+      packagePrices: const [],
       error: null,
     );
   }
 
-  Future<PackageInfo?> loadSelectedPackageInfo() async {
+  Future<SelectedPackageEditData?> loadSelectedPackageInfo() async {
     final packageId = state.selectedPackageId;
     if (packageId == null || packageId.isEmpty) return null;
-    if (state.loadingPackageInfo) return state.packageInfo;
+    if (state.loadingPackageInfo && state.packageInfo != null) {
+      return SelectedPackageEditData(
+        packageInfo: state.packageInfo!,
+        prices: state.packagePrices,
+      );
+    }
     if (state.loadedPackageId == packageId && state.packageInfo != null) {
-      return state.packageInfo;
+      return SelectedPackageEditData(
+        packageInfo: state.packageInfo!,
+        prices: state.packagePrices,
+      );
     }
 
     state = state.copyWith(loadingPackageInfo: true, error: null);
     try {
-      final response = await StoryApi().getPackageInfo(packageId);
+      final api = StoryApi();
+      final response = await api.getPackageInfo(packageId);
+      final pricesResponse = await api.getPackagePrices(packageId);
       final packageInfo = response.packageInfo;
       if (packageInfo == null) {
-        state = state.copyWith(error: response.message, packageInfo: null);
+        state = state.copyWith(
+          error: response.message,
+          packageInfo: null,
+          packagePrices: const [],
+        );
         return null;
       }
 
       state = state.copyWith(
         packageInfo: packageInfo,
+        packagePrices: pricesResponse.prices,
         loadedPackageId: packageId,
       );
-      return packageInfo;
+      return SelectedPackageEditData(
+        packageInfo: packageInfo,
+        prices: pricesResponse.prices,
+      );
     } catch (e) {
-      state = state.copyWith(error: e.toString(), packageInfo: null);
+      state = state.copyWith(
+        error: e.toString(),
+        packageInfo: null,
+        packagePrices: const [],
+      );
       return null;
     } finally {
       state = state.copyWith(loadingPackageInfo: false);
@@ -121,6 +148,16 @@ class PackageEditController extends Notifier<PackageEditState> {
   void clear() {
     state = const PackageEditState();
   }
+}
+
+class SelectedPackageEditData {
+  final PackageInfo packageInfo;
+  final List<Price> prices;
+
+  const SelectedPackageEditData({
+    required this.packageInfo,
+    required this.prices,
+  });
 }
 
 final packageEditControllerProvider =
