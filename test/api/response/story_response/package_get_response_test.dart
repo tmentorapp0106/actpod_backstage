@@ -16,6 +16,7 @@ void main() {
             'packageName': 'A Package',
             'packageDescription': 'A package description',
             'packageImageUrl': 'https://example.com/package.jpg',
+            'coverImageUrl': 'https://example.com/cover.jpg',
             'channelId': 'channel-1',
             'spaceId': 'space-1',
             'packageType': 'package',
@@ -78,6 +79,10 @@ void main() {
       expect(response.code, '200');
       expect(response.message, 'ok');
       expect(response.packageInfo?.packageId, 'package-1');
+      expect(
+        response.packageInfo?.coverImageUrl,
+        'https://example.com/cover.jpg',
+      );
       expect(response.packageInfo?.packagePrices.single.priceType, 'package');
       expect(response.packageInfo?.packagePrices.single.lable, 'Full set');
       expect(response.packageInfo?.createTime?.toUtc().year, 2026);
@@ -114,6 +119,7 @@ void main() {
               'packageName': 'A Package',
               'packageDescription': 'A package description',
               'packageImageUrl': 'https://example.com/package.jpg',
+              'coverImageUrl': 'https://example.com/cover.jpg',
               'channelId': 'channel-1',
               'spaceId': 'space-1',
               'packageType': 'package',
@@ -137,6 +143,10 @@ void main() {
       expect(response.code, '200');
       expect(response.packages, hasLength(1));
       expect(response.packages.single.packageId, 'package-1');
+      expect(
+        response.packages.single.coverImageUrl,
+        'https://example.com/cover.jpg',
+      );
       expect(response.packages.single.updateTime, isNull);
     });
 

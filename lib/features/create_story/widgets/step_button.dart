@@ -268,6 +268,11 @@ class _StepButtonState extends ConsumerState<StepButton> {
         state.packageImageBytes!,
       ),
     );
+    final coverImageResponse = await _runUploadStep(
+      flowCtrl,
+      'cover-image',
+      () => _uploadPackageImage(state.coverImagePath!, state.coverImageBytes!),
+    );
 
     for (var i = 0; i < state.stories.length; i++) {
       uploadedStories.add(
@@ -283,6 +288,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
         state.packageName!,
         state.packageDescription!,
         packageImageResponse.publicUrl,
+        coverImageResponse.publicUrl,
         state.packagePrices,
       ),
     );
@@ -325,6 +331,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
     }
 
     var packageImageUrl = state.packageImageUrl ?? '';
+    var coverImageUrl = state.coverImageUrl ?? '';
     if (state.packageImageBytes != null) {
       final packageImageResponse = await _runUploadStep(
         flowCtrl,
@@ -336,6 +343,15 @@ class _StepButtonState extends ConsumerState<StepButton> {
       );
       packageImageUrl = packageImageResponse.publicUrl;
     }
+    if (state.coverImageBytes != null) {
+      final coverImageResponse = await _runUploadStep(
+        flowCtrl,
+        'cover-image',
+        () =>
+            _uploadPackageImage(state.coverImagePath!, state.coverImageBytes!),
+      );
+      coverImageUrl = coverImageResponse.publicUrl;
+    }
 
     await _runUploadStep(
       flowCtrl,
@@ -345,6 +361,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
         state.packageName!,
         state.packageDescription!,
         packageImageUrl,
+        coverImageUrl,
         state.packagePrices,
       ),
     );
@@ -603,6 +620,10 @@ class _StepButtonState extends ConsumerState<StepButton> {
         id: 'package-image',
         label: '上傳套裝圖片: ${state.packageImagePath!}',
       ),
+      UploadQueueItem(
+        id: 'cover-image',
+        label: '上傳封面圖: ${state.coverImagePath!}',
+      ),
     ];
 
     for (var i = 0; i < state.stories.length; i++) {
@@ -647,6 +668,14 @@ class _StepButtonState extends ConsumerState<StepButton> {
         UploadQueueItem(
           id: 'package-image',
           label: '上傳套裝圖片: ${state.packageImagePath!}',
+        ),
+      );
+    }
+    if (state.coverImageBytes != null) {
+      items.add(
+        UploadQueueItem(
+          id: 'cover-image',
+          label: '上傳封面圖: ${state.coverImagePath!}',
         ),
       );
     }
@@ -977,6 +1006,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
     String packageName,
     String packageDescription,
     String packageImageUrl,
+    String coverImageUrl,
     List<PackagePriceDraft> packagePrices,
   ) async {
     if (!_useMockUpload) {
@@ -985,6 +1015,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
         packageName,
         packageDescription,
         packageImageUrl,
+        coverImageUrl,
         packagePrices
             .map(
               (price) => PackagePrice(
@@ -1056,6 +1087,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
     String packageName,
     String packageDescription,
     String packageImageUrl,
+    String coverImageUrl,
     List<PackagePriceDraft> packagePrices,
   ) async {
     if (!_useMockUpload) {
@@ -1064,6 +1096,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
         packageName,
         packageDescription,
         packageImageUrl,
+        coverImageUrl,
         packagePrices
             .map(
               (price) => PackagePrice(
