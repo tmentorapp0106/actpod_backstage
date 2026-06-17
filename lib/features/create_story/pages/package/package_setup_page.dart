@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:actpod_studio/features/create_story/controllers/create_flow_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/package_create_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/package_edit_controller.dart';
@@ -116,7 +118,27 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
               ),
             ),
             const SizedBox(height: 16),
-            _PackageImagePicker(state: state, ctrl: ctrl),
+            _PackageImagePicker(
+              title: '套裝圖片',
+              filePath: state.packageImagePath,
+              imageUrl: state.packageImageUrl,
+              imageBytes: state.packageImageBytes,
+              isPicking: state.pickingPackageImage,
+              onPick: ctrl.pickPackageImage,
+              uploadLabel: '上傳套裝圖片',
+              changeLabel: '更換套裝圖片',
+            ),
+            const SizedBox(height: 16),
+            _PackageImagePicker(
+              title: '封面圖',
+              filePath: state.coverImagePath,
+              imageUrl: state.coverImageUrl,
+              imageBytes: state.coverImageBytes,
+              isPicking: state.pickingCoverImage,
+              onPick: ctrl.pickCoverImage,
+              uploadLabel: '上傳封面圖',
+              changeLabel: '更換封面圖',
+            ),
             const SizedBox(height: 16),
             _PackagePricesEditor(state: state, ctrl: ctrl),
           ],
@@ -127,19 +149,34 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
 }
 
 class _PackageImagePicker extends StatelessWidget {
-  final PackageCreateState state;
-  final PackageCreateController ctrl;
+  final String title;
+  final String? filePath;
+  final String? imageUrl;
+  final Uint8List? imageBytes;
+  final bool isPicking;
+  final VoidCallback onPick;
+  final String uploadLabel;
+  final String changeLabel;
 
-  const _PackageImagePicker({required this.state, required this.ctrl});
+  const _PackageImagePicker({
+    required this.title,
+    required this.filePath,
+    required this.imageUrl,
+    required this.imageBytes,
+    required this.isPicking,
+    required this.onPick,
+    required this.uploadLabel,
+    required this.changeLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '套裝封面',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -148,49 +185,44 @@ class _PackageImagePicker extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             OutlinedButton.icon(
-              onPressed: state.pickingPackageImage
-                  ? null
-                  : ctrl.pickPackageImage,
+              onPressed: isPicking ? null : onPick,
               icon: const Icon(Icons.image_rounded),
               label: Text(
-                state.packageImageBytes == null &&
-                        (state.packageImageUrl == null ||
-                            state.packageImageUrl!.isEmpty)
-                    ? '上傳封面'
-                    : '更換封面',
+                imageBytes == null && (imageUrl == null || imageUrl!.isEmpty)
+                    ? uploadLabel
+                    : changeLabel,
               ),
             ),
-            if (state.pickingPackageImage)
+            if (isPicking)
               const SizedBox(
                 width: 18,
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-            if (state.packageImagePath != null)
+            if (filePath != null)
               Chip(
                 avatar: const Icon(Icons.check_circle_rounded, size: 18),
-                label: Text(state.packageImagePath!),
+                label: Text(filePath!),
               ),
           ],
         ),
-        if (state.packageImageBytes != null) ...[
+        if (imageBytes != null) ...[
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.memory(
-              state.packageImageBytes!,
+              imageBytes!,
               width: 120,
               height: 120,
               fit: BoxFit.cover,
             ),
           ),
-        ] else if (state.packageImageUrl != null &&
-            state.packageImageUrl!.isNotEmpty) ...[
+        ] else if (imageUrl != null && imageUrl!.isNotEmpty) ...[
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.network(
-              state.packageImageUrl!,
+              imageUrl!,
               width: 120,
               height: 120,
               fit: BoxFit.cover,

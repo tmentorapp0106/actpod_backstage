@@ -182,6 +182,9 @@ class PackageCreateState {
   final String? packageImagePath;
   final String? packageImageUrl;
   final Uint8List? packageImageBytes;
+  final String? coverImagePath;
+  final String? coverImageUrl;
+  final Uint8List? coverImageBytes;
   final List<PackagePriceDraft> packagePrices;
   final List<Space> spaces;
   final String? selectedSpace;
@@ -190,6 +193,7 @@ class PackageCreateState {
   final List<PackageStoryDraft> stories;
   final bool uploadingAudio;
   final bool pickingPackageImage;
+  final bool pickingCoverImage;
   final String? pickingAudioStoryId;
   final String? pickingCoverStoryId;
   final List<String> probingDurationStoryIds;
@@ -201,6 +205,9 @@ class PackageCreateState {
     this.packageImagePath,
     this.packageImageUrl,
     this.packageImageBytes,
+    this.coverImagePath,
+    this.coverImageUrl,
+    this.coverImageBytes,
     this.packagePrices = const [
       PackagePriceDraft(id: 'package_default', lable: '整套價格'),
     ],
@@ -211,6 +218,7 @@ class PackageCreateState {
     this.stories = const [],
     this.uploadingAudio = false,
     this.pickingPackageImage = false,
+    this.pickingCoverImage = false,
     this.pickingAudioStoryId,
     this.pickingCoverStoryId,
     this.probingDurationStoryIds = const [],
@@ -222,12 +230,14 @@ class PackageCreateState {
         (packageDescription != null && packageDescription!.trim().isNotEmpty) &&
         (packageImageBytes != null ||
             (packageImageUrl != null && packageImageUrl!.isNotEmpty)) &&
+        (coverImageBytes != null ||
+            (coverImageUrl != null && coverImageUrl!.isNotEmpty)) &&
         packagePrices.isNotEmpty &&
         packagePrices.every((price) => price.isComplete);
   }
 
   bool get hasValidStories {
-    return stories.isNotEmpty && stories.every((story) => story.isComplete);
+    return stories.every((story) => story.isComplete);
   }
 
   PackageCreateState copyWith({
@@ -236,6 +246,9 @@ class PackageCreateState {
     Object? packageImagePath = _unset,
     Object? packageImageUrl = _unset,
     Object? packageImageBytes = _unset,
+    Object? coverImagePath = _unset,
+    Object? coverImageUrl = _unset,
+    Object? coverImageBytes = _unset,
     List<PackagePriceDraft>? packagePrices,
     List<Space>? spaces,
     String? selectedSpace,
@@ -244,6 +257,7 @@ class PackageCreateState {
     List<PackageStoryDraft>? stories,
     bool? uploadingAudio,
     bool? pickingPackageImage,
+    bool? pickingCoverImage,
     Object? pickingAudioStoryId = _unset,
     Object? pickingCoverStoryId = _unset,
     List<String>? probingDurationStoryIds,
@@ -261,6 +275,15 @@ class PackageCreateState {
       packageImageBytes: packageImageBytes == _unset
           ? this.packageImageBytes
           : packageImageBytes as Uint8List?,
+      coverImagePath: coverImagePath == _unset
+          ? this.coverImagePath
+          : coverImagePath as String?,
+      coverImageUrl: coverImageUrl == _unset
+          ? this.coverImageUrl
+          : coverImageUrl as String?,
+      coverImageBytes: coverImageBytes == _unset
+          ? this.coverImageBytes
+          : coverImageBytes as Uint8List?,
       packagePrices: packagePrices ?? this.packagePrices,
       spaces: spaces ?? this.spaces,
       selectedSpace: selectedSpace ?? this.selectedSpace,
@@ -269,6 +292,7 @@ class PackageCreateState {
       stories: stories ?? this.stories,
       uploadingAudio: uploadingAudio ?? this.uploadingAudio,
       pickingPackageImage: pickingPackageImage ?? this.pickingPackageImage,
+      pickingCoverImage: pickingCoverImage ?? this.pickingCoverImage,
       pickingAudioStoryId: pickingAudioStoryId == _unset
           ? this.pickingAudioStoryId
           : pickingAudioStoryId as String?,
@@ -314,6 +338,9 @@ class PackageCreateController extends Notifier<PackageCreateState> {
       packageImagePath: packageInfo.packageImageUrl.isEmpty ? null : '目前封面',
       packageImageUrl: packageInfo.packageImageUrl,
       packageImageBytes: null,
+      coverImagePath: packageInfo.coverImageUrl.isEmpty ? null : '目前封面圖',
+      coverImageUrl: packageInfo.coverImageUrl,
+      coverImageBytes: null,
       packagePrices: loadedPrices.isEmpty
           ? [
               for (final price in packageInfo.packagePrices)
@@ -427,6 +454,31 @@ class PackageCreateController extends Notifier<PackageCreateState> {
       );
     } finally {
       state = state.copyWith(pickingPackageImage: false);
+    }
+  }
+
+  Future<void> pickCoverImage() async {
+    if (state.pickingCoverImage) return;
+
+    state = state.copyWith(pickingCoverImage: true);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+        allowMultiple: false,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+      if (file.bytes == null) return;
+
+      state = state.copyWith(
+        coverImagePath: file.name,
+        coverImageUrl: null,
+        coverImageBytes: file.bytes,
+      );
+    } finally {
+      state = state.copyWith(pickingCoverImage: false);
     }
   }
 

@@ -100,6 +100,7 @@ class StoryApi {
     String packageName,
     String packageDescription,
     String packageImageUrl,
+    String coverImageUrl,
     List<PackagePrice> packagePrices,
   ) async {
     var data = {
@@ -107,6 +108,7 @@ class StoryApi {
       "packageName": packageName,
       "packageDescription": packageDescription,
       "packageImageUrl": packageImageUrl,
+      "coverImageUrl": coverImageUrl,
       "packagePrices": packagePrices.map((price) => price.toJson()).toList(),
     };
 
@@ -122,6 +124,7 @@ class StoryApi {
     String packageName,
     String packageDescription,
     String packageImageUrl,
+    String coverImageUrl,
     List<PackagePrice> packagePrices,
   ) async {
     var data = {
@@ -129,6 +132,7 @@ class StoryApi {
       "packageName": packageName,
       "packageDescription": packageDescription,
       "packageImageUrl": packageImageUrl,
+      "coverImageUrl": coverImageUrl,
       "packagePrices": packagePrices.map((price) => price.toJson()).toList(),
     };
     final response = await DioClient.handelPostWithToken(

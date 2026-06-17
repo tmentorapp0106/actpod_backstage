@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:actpod_studio/app/theme/app_colors.dart';
 import 'package:actpod_studio/features/create_story/controllers/package_create_controller.dart';
 import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
@@ -42,6 +44,11 @@ class _PackagePreviewStepState extends ConsumerState<PackagePreviewStep> {
                 ),
                 const SizedBox(height: 12),
                 _SummaryRow(label: '套裝名稱', value: state.packageName ?? ''),
+                const SizedBox(height: 12),
+                _PackageCoverPreview(
+                  imageBytes: state.coverImageBytes,
+                  imageUrl: state.coverImageUrl,
+                ),
                 const SizedBox(height: 4),
                 const Text('價格', style: TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
@@ -80,8 +87,8 @@ class _PackagePreviewStepState extends ConsumerState<PackagePreviewStep> {
                 state.channels,
                 story.selectedChannel,
               ),
-              authorAvatar: ref.read(userControllerProvider)?.avatarUrl?? "",
-              authorName: ref.read(userControllerProvider)?.name?? "未知",
+              authorAvatar: ref.read(userControllerProvider)?.avatarUrl ?? "",
+              authorName: ref.read(userControllerProvider)?.name ?? "未知",
               isLoadingDuration: state.probingDurationStoryIds.contains(
                 story.id,
               ),
@@ -122,6 +129,44 @@ class _PricePreviewItem extends StatelessWidget {
             backgroundColor: price.isActive ? AppColors.brand : null,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PackageCoverPreview extends StatelessWidget {
+  final Uint8List? imageBytes;
+  final String? imageUrl;
+
+  const _PackageCoverPreview({
+    required this.imageBytes,
+    required this.imageUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageBytes == null && (imageUrl == null || imageUrl!.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          height: 160,
+          width: double.infinity,
+          child: imageBytes != null
+              ? Image.memory(imageBytes!, fit: BoxFit.cover)
+              : Image.network(
+                  imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: Colors.grey.shade100,
+                    child: const Icon(Icons.broken_image_rounded),
+                  ),
+                ),
+        ),
       ),
     );
   }
@@ -176,10 +221,7 @@ class _StoryPreviewItem extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 8),
-                      _UserMeta(
-                        imageUrl: authorAvatar,
-                        text: authorName,
-                      ),
+                      _UserMeta(imageUrl: authorAvatar, text: authorName),
                       const SizedBox(height: 8),
                       _ChannelMeta(
                         imageUrl: channelImageUrl,
@@ -226,10 +268,10 @@ class _StoryPreviewItem extends StatelessWidget {
                 const Text('0 次', style: TextStyle(color: Colors.black54)),
                 const SizedBox(width: 16),
                 Image.asset(
-                    'assets/images/podcoins.png',
-                    width: 24,
-                    height: 24,
-                  ),
+                  'assets/images/podcoins.png',
+                  width: 24,
+                  height: 24,
+                ),
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
@@ -278,26 +320,6 @@ String _channelImageUrlFor(List channels, String? channelName) {
   for (final channel in channels) {
     if (channel.channelName == channelName) {
       return channel.channelImageUrl;
-    }
-  }
-  return '';
-}
-
-String _channelNicknameFor(List channels, String? channelName) {
-  if (channelName == null || channelName.isEmpty) return '';
-  for (final channel in channels) {
-    if (channel.channelName == channelName) {
-      return channel.nickname;
-    }
-  }
-  return '';
-}
-
-String _channelAvatarUrlFor(List channels, String? channelName) {
-  if (channelName == null || channelName.isEmpty) return '';
-  for (final channel in channels) {
-    if (channel.channelName == channelName) {
-      return channel.userAvatarUrl;
     }
   }
   return '';

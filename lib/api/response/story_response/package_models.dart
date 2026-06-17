@@ -162,6 +162,7 @@ class PackageInfo {
   final String packageName;
   final String packageDescription;
   final String packageImageUrl;
+  final String coverImageUrl;
   final String channelId;
   final String spaceId;
   final List<PackagePrice> packagePrices;
@@ -180,6 +181,7 @@ class PackageInfo {
     required this.packageName,
     required this.packageDescription,
     required this.packageImageUrl,
+    required this.coverImageUrl,
     required this.channelId,
     required this.spaceId,
     required this.packagePrices,
@@ -200,6 +202,7 @@ class PackageInfo {
       packageName: _string(json['packageName']),
       packageDescription: _string(json['packageDescription']),
       packageImageUrl: _string(json['packageImageUrl']),
+      coverImageUrl: _string(json['coverImageUrl']),
       channelId: _string(json['channelId']),
       spaceId: _string(json['spaceId']),
       packagePrices: _packagePrices(json['packagePrices']),
@@ -221,6 +224,7 @@ class PremiumPackage {
   final String packageName;
   final String packageDescription;
   final String packageImageUrl;
+  final String coverImageUrl;
   final String channelId;
   final String spaceId;
   final DateTime? createTime;
@@ -232,6 +236,7 @@ class PremiumPackage {
     required this.packageName,
     required this.packageDescription,
     required this.packageImageUrl,
+    required this.coverImageUrl,
     required this.channelId,
     required this.spaceId,
     required this.createTime,
@@ -245,6 +250,7 @@ class PremiumPackage {
       packageName: _string(json['packageName']),
       packageDescription: _string(json['packageDescription']),
       packageImageUrl: _string(json['packageImageUrl']),
+      coverImageUrl: _string(json['coverImageUrl']),
       channelId: _string(json['channelId']),
       spaceId: _string(json['spaceId']),
       createTime: _dateTime(json['createTime']),

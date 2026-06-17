@@ -97,6 +97,10 @@ class _EditablePackageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageUrl = package.coverImageUrl.isNotEmpty
+        ? package.coverImageUrl
+        : package.packageImageUrl;
+
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: onTap,
@@ -118,7 +122,7 @@ class _EditablePackageTile extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: package.packageImageUrl.isEmpty
+              child: imageUrl.isEmpty
                   ? Container(
                       width: 64,
                       height: 64,
@@ -126,7 +130,7 @@ class _EditablePackageTile extends StatelessWidget {
                       child: const Icon(Icons.inventory_2_rounded),
                     )
                   : Image.network(
-                      package.packageImageUrl,
+                      imageUrl,
                       width: 64,
                       height: 64,
                       fit: BoxFit.cover,
