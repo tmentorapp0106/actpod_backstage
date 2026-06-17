@@ -34,7 +34,7 @@ class PackageStoriesStep extends ConsumerWidget {
                       ),
                       SizedBox(height: 6),
                       Text(
-                        '新增多個故事，並為每個故事選擇 Space 與 Channel。',
+                        '可先建立空套裝，或新增多個故事並為每個故事選擇 Space 與 Channel。',
                         style: TextStyle(color: Colors.black54),
                       ),
                     ],
@@ -59,7 +59,7 @@ class PackageStoriesStep extends ConsumerWidget {
                   children: [
                     const Icon(Icons.library_add_rounded, size: 36),
                     const SizedBox(height: 10),
-                    const Text('尚未新增故事'),
+                    const Text('尚未新增故事，可直接進入預覽'),
                   ],
                 ),
               ),

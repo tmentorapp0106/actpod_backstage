@@ -237,7 +237,7 @@ class PackageCreateState {
   }
 
   bool get hasValidStories {
-    return stories.isNotEmpty && stories.every((story) => story.isComplete);
+    return stories.every((story) => story.isComplete);
   }
 
   PackageCreateState copyWith({
