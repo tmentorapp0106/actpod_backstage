@@ -59,12 +59,12 @@ class DetailStep extends ConsumerWidget {
                   .read(singleCreateControllerProvider.notifier)
                   .setDescription(v),
               decoration: const InputDecoration(
-                hintText: '輸入敘述（800 字以內）',
+                hintText: '1500 字以內）',
                 border: OutlineInputBorder(),
                 alignLabelWithHint: true,
               ),
               maxLines: 6,
-              maxLength: 800,
+              maxLength: 1500,
             ),
             const SizedBox(height: 8),
 

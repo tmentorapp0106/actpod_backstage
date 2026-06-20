@@ -177,7 +177,7 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
               controller: _descriptionController,
               onChanged: (value) => ctrl.setStoryDescription(story.id, value),
               maxLines: 4,
-              maxLength: 800,
+              maxLength: 1500,
               decoration: const InputDecoration(
                 labelText: '故事描述',
                 border: OutlineInputBorder(),
@@ -189,7 +189,7 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
               controller: _packageNoteController,
               onChanged: (value) => ctrl.setStoryPackageNote(story.id, value),
               maxLines: 3,
-              maxLength: 800,
+              maxLength: 100,
               decoration: const InputDecoration(
                 labelText: 'Package Note',
                 border: OutlineInputBorder(),
