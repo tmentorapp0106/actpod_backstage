@@ -110,7 +110,7 @@ class _PackageSetupStepState extends ConsumerState<PackageSetupStep> {
               controller: _descriptionController,
               onChanged: ctrl.setPackageDescription,
               maxLines: 5,
-              maxLength: 800,
+              maxLength: 1500,
               decoration: const InputDecoration(
                 labelText: '套裝描述',
                 border: OutlineInputBorder(),
