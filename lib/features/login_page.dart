@@ -47,15 +47,52 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     ).showSnackBar(SnackBar(content: Text(msg, maxLines: 3)));
   }
 
-  Future<void> _onSignedIn(UserCredential cred) async {
-    final name =
-        cred.user?.displayName ?? cred.user?.email ?? cred.user?.uid ?? 'User';
+  Future<void> _onSignedIn() async {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Welcome, $name')));
     GoRouter.of(context).go('/publish/0');
     Navigator.of(context).maybePop();
+  }
+
+  Future<void> _loginToActpod(
+    UserCredential cred, {
+    String? email,
+    String? displayName,
+  }) async {
+    final idToken = await cred.user?.getIdToken();
+    final userCtrl = ref.read(userControllerProvider.notifier);
+    await userCtrl.login(
+      idToken ?? '',
+      email ?? cred.user?.email,
+      displayName ?? cred.user?.displayName ?? '',
+    );
+    await userCtrl.getUserInfo();
+
+    final userState = ref.read(userControllerProvider);
+    final singleCtrl = ref.read(singleCreateControllerProvider.notifier);
+    final packageCtrl = ref.read(packageCreateControllerProvider.notifier);
+    await singleCtrl.getSpaceList();
+    singleCtrl.getUserChannels(userState?.userId ?? '');
+    await packageCtrl.getSpaceList();
+    packageCtrl.getUserChannels(userState?.userId ?? '');
+  }
+
+  String? _nonEmpty(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  String? _profileString(Map<String, dynamic>? profile, String key) {
+    final value = profile?[key];
+    return value is String ? _nonEmpty(value) : null;
+  }
+
+  String? _appleDisplayName(AuthorizationCredentialAppleID credential) {
+    return _nonEmpty(
+      [
+        credential.givenName,
+        credential.familyName,
+      ].whereType<String>().where((part) => part.trim().isNotEmpty).join(' '),
+    );
   }
 
   Future<void> _signInWithGoogle() async {
@@ -68,29 +105,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       provider.setCustomParameters({'prompt': 'select_account'});
       cred = await FirebaseAuth.instance.signInWithPopup(provider);
       final googleprofile = cred.additionalUserInfo?.profile;
-      final idToken = await cred.user?.getIdToken();
-
-      final userCtrl = ref.read(userControllerProvider.notifier);
-      await userCtrl.login(
-        idToken ?? '',
-        googleprofile?['email'],
-        googleprofile?['name'] ?? '',
+      await _loginToActpod(
+        cred,
+        email: _profileString(googleprofile, 'email'),
+        displayName: _profileString(googleprofile, 'name'),
       );
-      await userCtrl.getUserInfo();
 
-      final userState = ref.read(userControllerProvider);
-      final singleCtrl = ref.read(singleCreateControllerProvider.notifier);
-      final packageCtrl = ref.read(packageCreateControllerProvider.notifier);
-      await singleCtrl.getSpaceList();
-      singleCtrl.getUserChannels(userState?.userId ?? '');
-      await packageCtrl.getSpaceList();
-      packageCtrl.getUserChannels(userState?.userId ?? '');
-
-      if (mounted) setState(() => _loading = false);
-
-      await _onSignedIn(cred);
+      await _onSignedIn();
     } catch (e) {
       _showError(e);
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -98,12 +123,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     setState(() => _loading = true);
     try {
       UserCredential cred;
+      String? appleEmail;
+      String? appleName;
 
       if (kIsWeb) {
         // Web 走 Firebase 的 OAuthProvider + Popup
         final provider = OAuthProvider('apple.com');
         // 如需 email/name，Apple 只在首次授權提供，後續請自行保存
         cred = await FirebaseAuth.instance.signInWithPopup(provider);
+        final appleProfile = cred.additionalUserInfo?.profile;
+        appleEmail = _profileString(appleProfile, 'email');
+        appleName = _profileString(appleProfile, 'name');
       } else if (Platform.isAndroid) {
         // Android 常見做法：走 Web OAuth（仍可用 sign_in_with_apple 取得 code/idToken）
         final appleIdCredential = await SignInWithApple.getAppleIDCredential(
@@ -124,6 +154,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           accessToken: appleIdCredential.authorizationCode,
         );
         cred = await FirebaseAuth.instance.signInWithCredential(credential);
+        appleEmail = appleIdCredential.email;
+        appleName = _appleDisplayName(appleIdCredential);
       } else {
         // iOS/macOS 原生 Sign in with Apple
         final appleIdCredential = await SignInWithApple.getAppleIDCredential(
@@ -138,9 +170,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           accessToken: appleIdCredential.authorizationCode,
         );
         cred = await FirebaseAuth.instance.signInWithCredential(credential);
+        appleEmail = appleIdCredential.email;
+        appleName = _appleDisplayName(appleIdCredential);
       }
 
-      await _onSignedIn(cred);
+      await _loginToActpod(cred, email: appleEmail, displayName: appleName);
+      await _onSignedIn();
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code != AuthorizationErrorCode.canceled) {
         _showError(e);
