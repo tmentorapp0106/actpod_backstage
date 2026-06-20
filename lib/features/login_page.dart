@@ -47,13 +47,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     ).showSnackBar(SnackBar(content: Text(msg, maxLines: 3)));
   }
 
-  Future<void> _onSignedIn(UserCredential cred) async {
-    final name =
-        cred.user?.displayName ?? cred.user?.email ?? cred.user?.uid ?? 'User';
+  Future<void> _onSignedIn() async {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Welcome, $name')));
     GoRouter.of(context).go('/publish/0');
     Navigator.of(context).maybePop();
   }
@@ -116,7 +111,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         displayName: _profileString(googleprofile, 'name'),
       );
 
-      await _onSignedIn(cred);
+      await _onSignedIn();
     } catch (e) {
       _showError(e);
     } finally {
@@ -180,7 +175,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
 
       await _loginToActpod(cred, email: appleEmail, displayName: appleName);
-      await _onSignedIn(cred);
+      await _onSignedIn();
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code != AuthorizationErrorCode.canceled) {
         _showError(e);
