@@ -172,6 +172,23 @@ class SettingsStep extends ConsumerWidget {
               ),
               const SizedBox(height: 28),
             ],
+            const _SectionTitle('內容分級'),
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              value: state.isAdult,
+              onChanged: (value) => ctrl.setIsAdult(value ?? false),
+              title: const Text('是否為成人內容'),
+              fillColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return theme.colorScheme.primary;
+                }
+                return Colors.white;
+              }),
+              side: const BorderSide(color: Colors.black, width: 1.5),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+            ),
+            const SizedBox(height: 20),
             const _SectionTitle('發布時間'),
             const SizedBox(height: 12),
             Row(
