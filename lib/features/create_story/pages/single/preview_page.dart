@@ -4,6 +4,7 @@ import 'package:actpod_studio/app/theme/theme.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_shared_models.dart';
 import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
 import 'package:actpod_studio/widgets/app_card.dart';
+import 'package:actpod_studio/widgets/content_rating_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
@@ -83,6 +84,7 @@ class _PreviewStepState extends ConsumerState<PreviewStep> {
           ),
           podcoins: state.pricePodcoin,
           twd: state.priceTwd,
+          isAdult: state.isAdult,
           // 若是排程則顯示排程時間，否則顯示現在（或你的建立時間）
           dateTime: isScheduled
               ? scheduledAt ?? DateTime.now()
@@ -115,6 +117,7 @@ class _StoryCardPreview extends StatelessWidget {
   final bool isProbingStoryLength;
   final int podcoins;
   final int twd;
+  final bool isAdult;
 
   const _StoryCardPreview({
     required this.title,
@@ -130,6 +133,7 @@ class _StoryCardPreview extends StatelessWidget {
     required this.isProbingStoryLength,
     required this.podcoins,
     required this.twd,
+    required this.isAdult,
     this.coverUrl,
     this.listens = 0,
     this.showNewBadge = false,
@@ -226,7 +230,16 @@ class _StoryCardPreview extends StatelessWidget {
                             : _fmtDuration(storyLength),
                       ),
                       const SizedBox(height: 8),
-                      _TagChip(label: selectedSpace), // 之後可用實際 space tag
+                      Row(
+                        children: [
+                          _TagChip(label: selectedSpace), // 之後可用實際 space tag
+                          const SizedBox(width: 6),
+                          ContentRatingBadge(
+                            contentRating: isAdult ? 'adult' : 'general',
+                            compact: true,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

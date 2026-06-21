@@ -70,6 +70,7 @@ class StoryApi {
     bool isPremium,
     int podcoins,
     int twd,
+    bool isAdult,
     String? collaboratorId,
     DateTime? releaseTime,
   ) async {
@@ -87,6 +88,7 @@ class StoryApi {
       "isPremium": isPremium,
       "podcoins": podcoins,
       "twd": twd,
+      "contentRating": isAdult? "adult" : "general",
       "collaboratorId": collaboratorId,
       "releaseTime": releaseTime?.toUtc().toIso8601String(),
     };

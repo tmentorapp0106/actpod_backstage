@@ -248,6 +248,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
         state.pricePodcoin > 0 || state.priceTwd > 0,
         state.pricePodcoin,
         state.priceTwd,
+        state.isAdult,
         state.collaborator?.userId,
         state.scheduledAt,
       ),
@@ -971,6 +972,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
     bool isPremium,
     int podcoins,
     int twd,
+    bool isAdult,
     String? collaboratorId,
     DateTime? releaseTime,
   ) async {
@@ -989,6 +991,7 @@ class _StepButtonState extends ConsumerState<StepButton> {
         isPremium,
         podcoins,
         twd,
+        isAdult,
         collaboratorId,
         releaseTime,
       );

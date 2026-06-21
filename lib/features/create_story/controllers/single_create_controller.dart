@@ -29,6 +29,7 @@ class SingleCreateState {
   final Duration selectionEnd;
   final int pricePodcoin;
   final int priceTwd;
+  final bool isAdult;
   final PublishMode publishMode;
   final DateTime? scheduledAt;
   final UserInfo? collaborator;
@@ -53,6 +54,7 @@ class SingleCreateState {
     this.selectionEnd = const Duration(seconds: 20),
     this.pricePodcoin = 0,
     this.priceTwd = 0,
+    this.isAdult = false,
     this.publishMode = PublishMode.now,
     this.scheduledAt,
     this.collaborator,
@@ -103,6 +105,7 @@ class SingleCreateState {
     Duration? selectionEnd,
     int? pricePodcoin,
     int? priceTwd,
+    bool? isAdult,
     PublishMode? publishMode,
     DateTime? scheduledAt,
     UserInfo? collaborator,
@@ -128,6 +131,7 @@ class SingleCreateState {
       selectionEnd: selectionEnd ?? this.selectionEnd,
       pricePodcoin: pricePodcoin ?? this.pricePodcoin,
       priceTwd: priceTwd ?? this.priceTwd,
+      isAdult: isAdult ?? this.isAdult,
       publishMode: publishMode ?? this.publishMode,
       scheduledAt: scheduledAt ?? this.scheduledAt,
       collaborator: collaborator ?? this.collaborator,
@@ -165,6 +169,10 @@ class SingleCreateController extends Notifier<SingleCreateState> {
 
   void setPriceTwd(int twd) {
     state = state.copyWith(priceTwd: twd);
+  }
+
+  void setIsAdult(bool isAdult) {
+    state = state.copyWith(isAdult: isAdult);
   }
 
   void setLoadingAudio(bool isLoading) {
