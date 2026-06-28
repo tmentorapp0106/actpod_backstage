@@ -1,4 +1,6 @@
 import 'package:actpod_studio/api/api.dart';
+import 'package:actpod_studio/api/response/story_response/batch_get_listen_count.dart';
+import 'package:actpod_studio/api/response/story_response/batch_get_user_stories.dart';
 import 'package:actpod_studio/api/response/story_response/create_package.dart';
 import 'package:actpod_studio/api/response/story_response/create_package_story.dart';
 import 'package:actpod_studio/api/response/story_response/get_package_info.dart';
@@ -9,6 +11,18 @@ import 'package:actpod_studio/api/response/story_response/update_package_story.d
 import 'package:actpod_studio/api/response/story_response/upload_story.dart';
 
 class StoryApi {
+  Future<BatchGetListenCountResponse> batchGetListenCount(
+    List<String> storyIds,
+  ) async {
+    final data = {"storyIds": storyIds};
+
+    final response = await DioClient.handelPostWithToken(
+      "/story/listenCount/batchGet",
+      data,
+    );
+    return BatchGetListenCountResponse.fromResponse(response);
+  }
+
   Future<GetPackagePricesResponse> getPackagePrices(String packageId) async {
     final response = await DioClient.handelGet(
       "/story/price/package/$packageId",
@@ -88,7 +102,7 @@ class StoryApi {
       "isPremium": isPremium,
       "podcoins": podcoins,
       "twd": twd,
-      "contentRating": isAdult? "adult" : "general",
+      "contentRating": isAdult ? "adult" : "general",
       "collaboratorId": collaboratorId,
       "releaseTime": releaseTime?.toUtc().toIso8601String(),
     };
@@ -220,5 +234,17 @@ class StoryApi {
       data,
     );
     return UpdatePackageStoryResponse.fromResponse(response);
+  }
+
+  Future<GetStoriesByUserIdRes> getStoriesByUserId(
+    String userId, {
+    bool filterReviewStatus = true,
+  }) async {
+    String queryParam = "?filterReviewStatus=${filterReviewStatus.toString()}";
+    final response = await DioClient.handelGet(
+      "/story/user/$userId$queryParam",
+      {},
+    );
+    return GetStoriesByUserIdRes.fromJson(response.data);
   }
 }

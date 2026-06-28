@@ -1,10 +1,10 @@
 import 'package:actpod_studio/features/create_story/create_story.dart';
 import 'package:actpod_studio/features/login_page.dart';
+import 'package:actpod_studio/features/statistic/statistic.dart';
 import 'package:actpod_studio/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../features/dashboard_page.dart';
 import '../features/stories_list_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -41,6 +41,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/statistics',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const StatisticPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
         path: '/publish/:step',
         builder: (ctx, st) {
           final step = int.tryParse(st.pathParameters['step'] ?? '0') ?? 0;
@@ -53,7 +63,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return LoginPage();
         },
       ),
-
     ],
   );
 });

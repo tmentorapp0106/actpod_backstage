@@ -1,4 +1,3 @@
-import 'package:actpod_studio/api/user_system_api.dart';
 import 'package:actpod_studio/features/create_story/controllers/user_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -85,6 +84,7 @@ class _SideNav extends StatelessWidget {
 
     final items = [
       // _NavItem('故事館', Icons.auto_graph_rounded, '/stories'),
+      _NavItem('統計總覽', Icons.bar_chart_rounded, '/statistics'),
       _NavItem('新建故事', Icons.add_box_rounded, '/publish/0'),
     ];
 
@@ -163,7 +163,7 @@ class _SideNav extends StatelessWidget {
                           ? Colors.transparent
                           : const Color.fromARGB(245, 245, 245, 245), // ✅ 修正後
                       tileColor: selected
-                          ? Color(0xFFFFBC1F).withOpacity(.1)
+                          ? Color(0xFFFFBC1F).withValues(alpha: .1)
                           : Colors.white,
                       onTap: () => context.go(it.path),
                     ),
@@ -201,10 +201,12 @@ class _SideNav extends StatelessWidget {
 Future<void> _signOut(BuildContext context) async {
   try {
     await FirebaseAuth.instance.signOut();
+    if (!context.mounted) return;
     // 登出成功後，導向登入頁面或其他適當的頁面
     context.go('/login');
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('已登出')));
   } catch (e) {
+    if (!context.mounted) return;
     // 處理登出錯誤
     ScaffoldMessenger.of(
       context,
@@ -221,7 +223,6 @@ class _CreatorInfoTile extends StatelessWidget {
   final int channelCount = 2; // 範例頻道數
 
   const _CreatorInfoTile({
-    super.key,
     required this.name,
     required this.subtitle,
     this.avatarUrl,
@@ -241,7 +242,7 @@ class _CreatorInfoTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundColor: seed.withOpacity(.15),
+              backgroundColor: seed.withValues(alpha: .15),
               backgroundImage: (avatarUrl != null && avatarUrl!.isNotEmpty)
                   ? NetworkImage(avatarUrl!)
                   : null,
