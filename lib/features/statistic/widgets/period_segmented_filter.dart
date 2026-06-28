@@ -35,6 +35,8 @@ class PeriodSegmentedFilter extends StatelessWidget {
         return Icons.view_week_rounded;
       case StatisticPeriod.month:
         return Icons.calendar_month_rounded;
+      case StatisticPeriod.custom:
+        return Icons.date_range_rounded;
     }
   }
 }

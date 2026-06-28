@@ -11,16 +11,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 @immutable
 class StatisticState {
   final StatisticPeriod period;
+  final StatisticTimeRange timeRange;
   final bool loading;
   final String? error;
   final List<StoryStatistic> stories;
 
   const StatisticState({
     this.period = StatisticPeriod.day,
+    required this.timeRange,
     this.loading = false,
     this.error,
     this.stories = const [],
   });
+
+  factory StatisticState.initial() {
+    final period = StatisticPeriod.day;
+    return StatisticState(
+      period: period,
+      timeRange: period.rangeFor(DateTime.now()),
+    );
+  }
 
   StatisticSummary get summary {
     return StatisticSummary(
@@ -47,12 +57,14 @@ class StatisticState {
 
   StatisticState copyWith({
     StatisticPeriod? period,
+    StatisticTimeRange? timeRange,
     bool? loading,
     Object? error = _unset,
     List<StoryStatistic>? stories,
   }) {
     return StatisticState(
       period: period ?? this.period,
+      timeRange: timeRange ?? this.timeRange,
       loading: loading ?? this.loading,
       error: error == _unset ? this.error : error as String?,
       stories: stories ?? this.stories,
@@ -64,10 +76,25 @@ const _unset = Object();
 
 class StatisticController extends Notifier<StatisticState> {
   @override
-  StatisticState build() => const StatisticState();
+  StatisticState build() => StatisticState.initial();
 
   Future<void> changePeriod(StatisticPeriod period, String userId) async {
-    state = state.copyWith(period: period);
+    if (period == StatisticPeriod.custom) return;
+    state = state.copyWith(
+      period: period,
+      timeRange: period.rangeFor(DateTime.now()),
+    );
+    await load(userId);
+  }
+
+  Future<void> changeTimeRange(
+    StatisticTimeRange timeRange,
+    String userId,
+  ) async {
+    state = state.copyWith(
+      period: StatisticPeriod.custom,
+      timeRange: timeRange,
+    );
     await load(userId);
   }
 
@@ -77,6 +104,7 @@ class StatisticController extends Notifier<StatisticState> {
     state = state.copyWith(loading: true, error: null);
     try {
       final storyApi = StoryApi();
+      final timeRange = _activeTimeRange();
       final storiesResponse = await storyApi.getStoriesByUserId(
         userId,
         filterReviewStatus: false,
@@ -85,6 +113,7 @@ class StatisticController extends Notifier<StatisticState> {
       final stories = <String, StatisticStory>{};
       for (final story in storiesResponse.storyList ?? const []) {
         if (story.storyId.isEmpty) continue;
+        if (!timeRange.contains(story.releaseTime)) continue;
         stories[story.storyId] = StatisticStory(
           storyId: story.storyId,
           storyName: story.storyName,
@@ -95,7 +124,11 @@ class StatisticController extends Notifier<StatisticState> {
 
       final storyIds = stories.keys.toList();
       if (storyIds.isEmpty) {
-        state = state.copyWith(stories: const [], loading: false);
+        state = state.copyWith(
+          stories: const [],
+          timeRange: timeRange,
+          loading: false,
+        );
         return;
       }
 
@@ -128,10 +161,19 @@ class StatisticController extends Notifier<StatisticState> {
           ),
       ]..sort((a, b) => b.listenCount.compareTo(a.listenCount));
 
-      state = state.copyWith(stories: storyStats, loading: false);
+      state = state.copyWith(
+        stories: storyStats,
+        timeRange: timeRange,
+        loading: false,
+      );
     } catch (e) {
       state = state.copyWith(error: e.toString(), loading: false);
     }
+  }
+
+  StatisticTimeRange _activeTimeRange() {
+    if (state.period == StatisticPeriod.custom) return state.timeRange;
+    return state.period.rangeFor(DateTime.now());
   }
 
   Map<String, int> _listenCountMap(List<StoryListenCount> values) {

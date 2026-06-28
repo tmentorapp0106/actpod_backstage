@@ -34,6 +34,70 @@ class _StatisticPageState extends ConsumerState<StatisticPage> {
     );
   }
 
+  Future<void> _handlePeriodChanged(
+    StatisticPeriod period,
+    String userId,
+    StatisticTimeRange currentRange,
+  ) async {
+    if (period == StatisticPeriod.custom) {
+      await _pickTimeRange(userId, currentRange);
+      return;
+    }
+    await ref
+        .read(statisticControllerProvider.notifier)
+        .changePeriod(period, userId);
+  }
+
+  Future<void> _pickTimeRange(
+    String userId,
+    StatisticTimeRange currentRange,
+  ) async {
+    if (userId.isEmpty) return;
+
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 1, 12, 31),
+      initialDateRange: DateTimeRange(
+        start: currentRange.start,
+        end: currentRange.end.subtract(const Duration(days: 1)),
+      ),
+      helpText: '選擇統計區間',
+      cancelText: '取消',
+      confirmText: '套用',
+      saveText: '套用',
+      fieldStartLabelText: '開始日期',
+      fieldEndLabelText: '結束日期',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            datePickerTheme: const DatePickerThemeData(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked == null || !mounted) return;
+
+    final range = StatisticTimeRange(
+      start: DateTime(picked.start.year, picked.start.month, picked.start.day),
+      end: DateTime(
+        picked.end.year,
+        picked.end.month,
+        picked.end.day,
+      ).add(const Duration(days: 1)),
+    );
+    await ref
+        .read(statisticControllerProvider.notifier)
+        .changeTimeRange(range, userId);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(statisticControllerProvider);
@@ -55,10 +119,10 @@ class _StatisticPageState extends ConsumerState<StatisticPage> {
           children: [
             _Header(
               period: state.period,
+              timeRange: state.timeRange,
               loading: state.loading,
-              onPeriodChanged: (period) => ref
-                  .read(statisticControllerProvider.notifier)
-                  .changePeriod(period, userId),
+              onPeriodChanged: (period) =>
+                  _handlePeriodChanged(period, userId, state.timeRange),
               onRefresh: () =>
                   ref.read(statisticControllerProvider.notifier).load(userId),
             ),
@@ -67,7 +131,11 @@ class _StatisticPageState extends ConsumerState<StatisticPage> {
               _ErrorBanner(message: state.error!),
               const SizedBox(height: 18),
             ],
-            _SummaryGrid(summary: state.summary, period: state.period),
+            _SummaryGrid(
+              summary: state.summary,
+              period: state.period,
+              timeRange: state.timeRange,
+            ),
             const SizedBox(height: 18),
             LayoutBuilder(
               builder: (context, constraints) {
@@ -127,12 +195,14 @@ class _StatisticPageState extends ConsumerState<StatisticPage> {
 
 class _Header extends StatelessWidget {
   final StatisticPeriod period;
+  final StatisticTimeRange timeRange;
   final bool loading;
   final ValueChanged<StatisticPeriod> onPeriodChanged;
   final VoidCallback onRefresh;
 
   const _Header({
     required this.period,
+    required this.timeRange,
     required this.loading,
     required this.onPeriodChanged,
     required this.onRefresh,
@@ -145,7 +215,7 @@ class _Header extends StatelessWidget {
       runSpacing: 12,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        const Column(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -153,7 +223,10 @@ class _Header extends StatelessWidget {
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
             ),
             SizedBox(height: 4),
-            Text('播放、留言與互動成效', style: TextStyle(color: Color(0xFF6B7280))),
+            Text(
+              '${period.title}發布故事：${timeRange.label}',
+              style: const TextStyle(color: Color(0xFF6B7280)),
+            ),
           ],
         ),
         const SizedBox(width: 8),
@@ -177,12 +250,17 @@ class _Header extends StatelessWidget {
 class _SummaryGrid extends StatelessWidget {
   final StatisticSummary summary;
   final StatisticPeriod period;
+  final StatisticTimeRange timeRange;
 
-  const _SummaryGrid({required this.summary, required this.period});
+  const _SummaryGrid({
+    required this.summary,
+    required this.period,
+    required this.timeRange,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final caption = period.label;
+    final caption = '${period.title} · ${timeRange.label}';
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
