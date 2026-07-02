@@ -1,4 +1,5 @@
 import 'package:actpod_studio/features/create_story/create_story.dart';
+import 'package:actpod_studio/features/donation/donation.dart';
 import 'package:actpod_studio/features/interactive_managment/interactive_managment.dart';
 import 'package:actpod_studio/features/login_page.dart';
 import 'package:actpod_studio/features/statistic/statistic.dart';
@@ -46,6 +47,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const StatisticPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/donations',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const DonationPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

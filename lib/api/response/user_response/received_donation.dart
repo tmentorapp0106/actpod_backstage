@@ -3,13 +3,15 @@ import 'package:dio/dio.dart';
 class ReceivedDonationResponse {
   final String code;
   final String message;
-  final ReceivedDonation? donation;
+  final List<ReceivedDonation> donations;
 
   const ReceivedDonationResponse({
     required this.code,
     required this.message,
-    required this.donation,
+    required this.donations,
   });
+
+  ReceivedDonation? get donation => donations.isEmpty ? null : donations.first;
 
   factory ReceivedDonationResponse.fromResponse(Response response) {
     final body = response.data;
@@ -19,9 +21,7 @@ class ReceivedDonationResponse {
     return ReceivedDonationResponse(
       code: _string(json['code']),
       message: _string(json['message']),
-      donation: data is Map<String, dynamic>
-          ? ReceivedDonation.fromJson(data)
-          : null,
+      donations: _donations(data),
     );
   }
 }
@@ -74,4 +74,17 @@ DateTime? _dateTime(dynamic value) {
   if (value is DateTime) return value;
   if (value is String) return DateTime.tryParse(value);
   return null;
+}
+
+List<ReceivedDonation> _donations(dynamic data) {
+  if (data is List) {
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(ReceivedDonation.fromJson)
+        .toList();
+  }
+  if (data is Map<String, dynamic>) {
+    return [ReceivedDonation.fromJson(data)];
+  }
+  return const [];
 }

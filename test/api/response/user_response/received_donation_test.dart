@@ -23,6 +23,7 @@ void main() {
 
       expect(response.code, '0000');
       expect(response.message, 'OK');
+      expect(response.donations, hasLength(1));
       expect(response.donation?.transactionId, 'transaction-1');
       expect(response.donation?.fromUserId, 'user-1');
       expect(response.donation?.fromUserNickname, 'Supporter');
@@ -43,6 +44,32 @@ void main() {
       expect(response.code, '');
       expect(response.message, '');
       expect(response.donation, isNull);
+      expect(response.donations, isEmpty);
+    });
+
+    test('parses donation data as an array', () {
+      final response = ReceivedDonationResponse.fromResponse(
+        _response({
+          'code': '0000',
+          'message': 'OK',
+          'data': [
+            {
+              'transactionId': 'transaction-1',
+              'receivedPodCash': '100',
+              'createTime': '2026-07-02T12:30:00Z',
+            },
+            {
+              'transactionId': 'transaction-2',
+              'receivedPodCash': 50,
+              'createTime': '2026-07-01T12:30:00Z',
+            },
+          ],
+        }),
+      );
+
+      expect(response.donations, hasLength(2));
+      expect(response.donations.first.transactionId, 'transaction-1');
+      expect(response.donations.first.receivedPodCash, 100);
     });
   });
 }
