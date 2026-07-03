@@ -3,6 +3,7 @@ import 'package:actpod_studio/features/donation/donation.dart';
 import 'package:actpod_studio/features/interactive_managment/interactive_managment.dart';
 import 'package:actpod_studio/features/login_page.dart';
 import 'package:actpod_studio/features/statistic/statistic.dart';
+import 'package:actpod_studio/features/withdraw/withdraw.dart';
 import 'package:actpod_studio/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,6 +58,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const DonationPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/withdraws',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const WithdrawPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
