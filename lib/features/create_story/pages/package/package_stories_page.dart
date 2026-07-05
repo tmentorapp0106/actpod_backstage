@@ -176,7 +176,8 @@ class _PackageStoryEditorState extends ConsumerState<_PackageStoryEditor> {
             TextFormField(
               controller: _descriptionController,
               onChanged: (value) => ctrl.setStoryDescription(story.id, value),
-              maxLines: 4,
+              minLines: 5,
+              maxLines: null,
               maxLength: 5000,
               decoration: const InputDecoration(
                 labelText: '故事描述',
