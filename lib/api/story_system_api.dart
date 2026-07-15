@@ -4,6 +4,8 @@ import 'package:actpod_studio/api/response/story_response/batch_get_user_stories
 import 'package:actpod_studio/api/response/story_response/create_package.dart';
 import 'package:actpod_studio/api/response/story_response/create_package_story.dart';
 import 'package:actpod_studio/api/response/story_response/get_package_info.dart';
+import 'package:actpod_studio/api/response/story_response/get_purchase_record_count.dart';
+import 'package:actpod_studio/api/response/story_response/get_purchase_records.dart';
 import 'package:actpod_studio/api/response/story_response/get_user_packages.dart';
 import 'package:actpod_studio/api/response/story_response/package_models.dart';
 import 'package:actpod_studio/api/response/story_response/update_package.dart';
@@ -68,6 +70,37 @@ class StoryApi {
       {},
     );
     return GetUserPackagesResponse.fromResponse(response);
+  }
+
+  Future<GetPurchaseRecordCountResponse> getPurchaseRecordCount({
+    String? storyId,
+    String? packageId,
+  }) async {
+    final query = <String, dynamic>{
+      if (storyId?.isNotEmpty ?? false) 'storyId': storyId,
+      if (packageId?.isNotEmpty ?? false) 'packageId': packageId,
+    };
+    final response = await DioClient.handelGet(
+      "/story/premium/record/count",
+      query,
+    );
+    return GetPurchaseRecordCountResponse.fromResponse(response);
+  }
+
+  Future<GetPurchaseRecordsResponse> getPurchaseRecords({
+    String? storyId,
+    String? packageId,
+    dynamic page,
+    dynamic pageSize,
+  }) async {
+    final query = <String, dynamic>{
+      if (storyId?.isNotEmpty ?? false) 'storyId': storyId,
+      if (packageId?.isNotEmpty ?? false) 'packageId': packageId,
+      'page': _parsePageOrDefault(page, 1),
+      'pageSize': _parsePageOrDefault(pageSize, 20),
+    };
+    final response = await DioClient.handelGet("/story/premium/records", query);
+    return GetPurchaseRecordsResponse.fromResponse(response);
   }
 
   Future<UploadStoryResponse> uploadStory(
@@ -239,12 +272,19 @@ class StoryApi {
   Future<GetStoriesByUserIdRes> getStoriesByUserId(
     String userId, {
     bool filterReviewStatus = true,
+    bool? isPremium,
   }) async {
-    String queryParam = "?filterReviewStatus=${filterReviewStatus.toString()}";
-    final response = await DioClient.handelGet(
-      "/story/user/$userId$queryParam",
-      {},
-    );
+    final response = await DioClient.handelGet("/story/user/$userId", {
+      'filterReviewStatus': filterReviewStatus,
+      if (isPremium != null) 'isPremium': isPremium,
+    });
     return GetStoriesByUserIdRes.fromJson(response.data);
   }
+}
+
+int _parsePageOrDefault(dynamic value, int fallback) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
 }

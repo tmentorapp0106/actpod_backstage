@@ -85,6 +85,7 @@ class _SideNav extends StatelessWidget {
     final items = [
       // _NavItem('故事館', Icons.auto_graph_rounded, '/stories'),
       _NavItem('統計總覽', Icons.bar_chart_rounded, '/statistics'),
+      _NavItem('Premium 銷售', Icons.sell_rounded, '/premium_sales'),
       _NavItem('Donation', Icons.payments_rounded, '/donations'),
       _NavItem('提領', Icons.account_balance_wallet_rounded, '/withdraws'),
       _NavItem('互動管理', Icons.forum_rounded, '/interactive_managment'),

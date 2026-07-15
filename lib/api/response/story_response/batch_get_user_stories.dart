@@ -41,6 +41,7 @@ class StoryItem {
   int count;
   bool locked;
   bool isPremium;
+  String packageId;
   int price;
   String contentRating;
   DateTime releaseTime;
@@ -72,6 +73,7 @@ class StoryItem {
     this.count,
     this.locked,
     this.isPremium,
+    this.packageId,
     this.price,
     this.contentRating,
     this.releaseTime,
@@ -107,6 +109,7 @@ class StoryItem {
       _int(json["count"]),
       _bool(json["locked"]),
       _bool(json["isPremium"]),
+      _string(json["packageId"]),
       _int(json["price"]),
       json["contentRating"] ?? "general",
       _dateTime(json["releaseTime"]),

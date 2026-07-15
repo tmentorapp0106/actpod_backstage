@@ -8,7 +8,7 @@ String userId = '';
 
 class DioClient {
   static const String _baseUrl =
-      'https://apiv1.actpodapp.com';
+      'https://gateway-1033518616359.asia-east1.run.app';
   static const Duration _timeout = Duration(seconds: 20);
 
   static Dio get instance => Dio(BaseOptions(baseUrl: _baseUrl));

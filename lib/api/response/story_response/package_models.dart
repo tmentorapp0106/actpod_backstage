@@ -259,6 +259,87 @@ class PremiumPackage {
   }
 }
 
+class PurchaseRecordUserInfo {
+  final String userId;
+  final String nickname;
+  final String avatarUrl;
+
+  const PurchaseRecordUserInfo({
+    required this.userId,
+    required this.nickname,
+    required this.avatarUrl,
+  });
+
+  factory PurchaseRecordUserInfo.fromJson(Map<String, dynamic> json) {
+    return PurchaseRecordUserInfo(
+      userId: _string(json['userId']),
+      nickname: _string(json['nickname']),
+      avatarUrl: _string(json['avatarUrl']),
+    );
+  }
+}
+
+class PurchaseRecord {
+  final String userId;
+  final String packageId;
+  final String storyId;
+  final String priceId;
+  final bool archive;
+  final DateTime? updateTime;
+  final DateTime? createTime;
+  final PurchaseRecordUserInfo? userInfo;
+
+  const PurchaseRecord({
+    required this.userId,
+    required this.packageId,
+    required this.storyId,
+    required this.priceId,
+    required this.archive,
+    required this.updateTime,
+    required this.createTime,
+    required this.userInfo,
+  });
+
+  factory PurchaseRecord.fromJson(Map<String, dynamic> json) {
+    final userInfo = json['userInfo'];
+    return PurchaseRecord(
+      userId: _string(json['userId']),
+      packageId: _string(json['packageId']),
+      storyId: _string(json['storyId']),
+      priceId: _string(json['priceId']),
+      archive: _bool(json['archive']),
+      updateTime: _dateTime(json['updateTime']),
+      createTime: _dateTime(json['createTime']),
+      userInfo: userInfo is Map<String, dynamic>
+          ? PurchaseRecordUserInfo.fromJson(userInfo)
+          : null,
+    );
+  }
+}
+
+class PurchaseRecordPage {
+  final int total;
+  final int page;
+  final int pageSize;
+  final List<PurchaseRecord> records;
+
+  const PurchaseRecordPage({
+    required this.total,
+    required this.page,
+    required this.pageSize,
+    required this.records,
+  });
+
+  factory PurchaseRecordPage.fromJson(Map<String, dynamic> json) {
+    return PurchaseRecordPage(
+      total: _int(json['total']),
+      page: _int(json['page']),
+      pageSize: _int(json['pageSize']),
+      records: _purchaseRecords(json['records']),
+    );
+  }
+}
+
 class PackageStoryInfo {
   final String storyId;
   final String userId;
@@ -420,5 +501,13 @@ List<PackageStoryInfo> _packageStories(dynamic value) {
   return value
       .whereType<Map<String, dynamic>>()
       .map(PackageStoryInfo.fromJson)
+      .toList();
+}
+
+List<PurchaseRecord> _purchaseRecords(dynamic value) {
+  if (value is! List) return const [];
+  return value
+      .whereType<Map<String, dynamic>>()
+      .map(PurchaseRecord.fromJson)
       .toList();
 }

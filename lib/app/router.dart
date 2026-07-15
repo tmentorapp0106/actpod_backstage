@@ -1,7 +1,11 @@
+import 'package:actpod_studio/api/response/story_response/batch_get_user_stories.dart';
 import 'package:actpod_studio/features/create_story/create_story.dart';
 import 'package:actpod_studio/features/donation/donation.dart';
 import 'package:actpod_studio/features/interactive_managment/interactive_managment.dart';
 import 'package:actpod_studio/features/login_page.dart';
+import 'package:actpod_studio/features/premium_sales/models/premium_sales_models.dart';
+import 'package:actpod_studio/features/premium_sales/pages/purchase_record_detail_page.dart';
+import 'package:actpod_studio/features/premium_sales/premium_sales.dart';
 import 'package:actpod_studio/features/statistic/statistic.dart';
 import 'package:actpod_studio/features/withdraw/withdraw.dart';
 import 'package:actpod_studio/main.dart';
@@ -42,6 +46,44 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             return FadeTransition(opacity: animation, child: child);
           },
         ),
+      ),
+      GoRoute(
+        path: '/premium_sales',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const PremiumSalesPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/premium_sales/detail',
+        pageBuilder: (context, state) {
+          final type = state.uri.queryParameters['type'] == 'package'
+              ? PremiumSaleType.package
+              : PremiumSaleType.single;
+          final targetId = state.uri.queryParameters['id'] ?? '';
+          final title = state.uri.queryParameters['title'] ?? '';
+          final subtitle = state.uri.queryParameters['subtitle'] ?? '';
+          final stories = state.extra is List
+              ? (state.extra as List).whereType<StoryItem>().toList()
+              : const <StoryItem>[];
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: PurchaseRecordDetailPage(
+              type: type,
+              targetId: targetId,
+              title: title,
+              subtitle: subtitle,
+              stories: stories,
+            ),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+          );
+        },
       ),
       GoRoute(
         path: '/statistics',
