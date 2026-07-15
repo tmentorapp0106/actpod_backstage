@@ -21,11 +21,6 @@ class PremiumSalesController extends Notifier<PremiumSalesState> {
       final packagesResponse = await api.getUserPackages(userId);
       final stories = [...?storiesResponse.storyList]
         ..sort((a, b) => b.releaseTime.compareTo(a.releaseTime));
-      final packageNames = {
-        for (final package in packagesResponse.packages)
-          package.packageId: package.packageName,
-      };
-
       final singleStories = stories
           .where((story) => story.packageId.isEmpty)
           .toList();
@@ -42,7 +37,12 @@ class PremiumSalesController extends Notifier<PremiumSalesState> {
         ),
       );
 
-      final packageIds = packageGroups.keys.toList();
+      final userPackages = packagesResponse.packages
+          .where((package) => package.packageId.isNotEmpty)
+          .toList();
+      final packageIds = userPackages
+          .map((package) => package.packageId)
+          .toList();
       final packageCounts = await Future.wait(
         packageIds.map(
           (packageId) => api.getPurchaseRecordCount(packageId: packageId),
@@ -62,17 +62,18 @@ class PremiumSalesController extends Notifier<PremiumSalesState> {
       ]..sort((a, b) => b.salesCount.compareTo(a.salesCount));
 
       final packageEntries = [
-        for (var i = 0; i < packageIds.length; i++)
+        for (var i = 0; i < userPackages.length; i++)
           PremiumSaleEntry(
             type: PremiumSaleType.package,
-            targetId: packageIds[i],
-            title: packageNames[packageIds[i]]?.trim().isNotEmpty == true
-                ? packageNames[packageIds[i]]!
+            targetId: userPackages[i].packageId,
+            title: userPackages[i].packageName.trim().isNotEmpty
+                ? userPackages[i].packageName
                 : 'Package ${i + 1}',
-            subtitle:
-                '${packageGroups[packageIds[i]]!.length} 個 premium stories',
+            subtitle: userPackages[i].packageDescription.trim().isNotEmpty
+                ? userPackages[i].packageDescription
+                : userPackages[i].channelId,
             salesCount: packageCounts[i].count,
-            stories: packageGroups[packageIds[i]]!.cast(),
+            stories: packageGroups[userPackages[i].packageId] ?? const [],
           ),
       ]..sort((a, b) => b.salesCount.compareTo(a.salesCount));
 
