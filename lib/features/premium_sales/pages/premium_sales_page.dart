@@ -82,14 +82,12 @@ class _PremiumSalesPageState extends ConsumerState<PremiumSalesPage> {
             else ...[
               _Section(
                 title: 'Package',
-                subtitle: 'packageId 不為空的 premium story 會歸在這裡',
                 items: state.packages,
                 emptyMessage: '目前沒有 package premium stories',
               ),
               const SizedBox(height: 18),
               _Section(
                 title: '個別販售',
-                subtitle: 'packageId 為空的 premium story',
                 items: state.singleStories,
                 emptyMessage: '目前沒有個別 premium stories',
               ),
@@ -135,11 +133,6 @@ class _Header extends StatelessWidget {
             Text(
               'Premium 銷售紀錄',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
-            ),
-            SizedBox(height: 4),
-            Text(
-              '只抓 isPremium=true 的 stories，並依 package / 個別販售分類',
-              style: TextStyle(color: Color(0xFF6B7280)),
             ),
           ],
         ),
@@ -217,13 +210,11 @@ class _MetricCard extends StatelessWidget {
 
 class _Section extends StatelessWidget {
   final String title;
-  final String subtitle;
   final List<PremiumSaleEntry> items;
   final String emptyMessage;
 
   const _Section({
     required this.title,
-    required this.subtitle,
     required this.items,
     required this.emptyMessage,
   });
@@ -244,8 +235,6 @@ class _Section extends StatelessWidget {
             title,
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 4),
-          Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280))),
           const SizedBox(height: 16),
           if (items.isEmpty)
             Padding(
@@ -330,32 +319,6 @@ class _SaleCard extends StatelessWidget {
                       item.subtitle,
                       style: const TextStyle(color: Color(0xFF6B7280)),
                     ),
-                    if (item.stories.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: item.stories
-                            .take(4)
-                            .map(
-                              (story) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  story.storyName,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ],
                   ],
                 ),
               ),
