@@ -10,6 +10,7 @@ class PremiumSaleEntry {
   final String targetId;
   final String title;
   final String subtitle;
+  final String imageUrl;
   final int salesCount;
   final List<StoryItem> stories;
 
@@ -18,6 +19,7 @@ class PremiumSaleEntry {
     required this.targetId,
     required this.title,
     required this.subtitle,
+    required this.imageUrl,
     required this.salesCount,
     required this.stories,
   });
