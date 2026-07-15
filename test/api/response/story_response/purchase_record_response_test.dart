@@ -5,24 +5,37 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('GetPurchaseRecordCountResponse', () {
-    test('parses count from data', () {
+    test('parses count list from data', () {
       final response = GetPurchaseRecordCountResponse.fromResponse(
-        _response({'code': '0000', 'message': 'OK', 'data': 12}),
+        _response({
+          'code': '0000',
+          'message': 'OK',
+          'data': [
+            {'storyId': 'story_1', 'count': 3},
+            {'storyId': 'story_2', 'count': 0},
+            {'packageId': 'package_1', 'count': 8},
+            {'packageId': 'package_2', 'count': 1},
+          ],
+        }),
       );
 
       expect(response.code, '0000');
       expect(response.message, 'OK');
-      expect(response.count, 12);
+      expect(response.data, hasLength(4));
+      expect(response.data[0].storyId, 'story_1');
+      expect(response.data[0].count, 3);
+      expect(response.data[2].packageId, 'package_1');
+      expect(response.data[2].count, 8);
     });
 
     test('falls back safely for invalid data', () {
       final response = GetPurchaseRecordCountResponse.fromResponse(
-        _response({'code': 0, 'message': null, 'data': 'not-a-number'}),
+        _response({'code': 0, 'message': null, 'data': 'not-a-list'}),
       );
 
       expect(response.code, '');
       expect(response.message, '');
-      expect(response.count, 0);
+      expect(response.data, isEmpty);
     });
   });
 

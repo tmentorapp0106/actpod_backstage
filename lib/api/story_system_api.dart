@@ -73,16 +73,16 @@ class StoryApi {
   }
 
   Future<GetPurchaseRecordCountResponse> getPurchaseRecordCount({
-    String? storyId,
-    String? packageId,
+    List<String> storyIds = const [],
+    List<String> packageIds = const [],
   }) async {
-    final query = <String, dynamic>{
-      if (storyId?.isNotEmpty ?? false) 'storyId': storyId,
-      if (packageId?.isNotEmpty ?? false) 'packageId': packageId,
+    final data = <String, dynamic>{
+      'storyIds': storyIds.where((id) => id.isNotEmpty).toList(),
+      'packageIds': packageIds.where((id) => id.isNotEmpty).toList(),
     };
-    final response = await DioClient.handelGet(
+    final response = await DioClient.handelPostWithToken(
       "/story/premium/record/count",
-      query,
+      data,
     );
     return GetPurchaseRecordCountResponse.fromResponse(response);
   }

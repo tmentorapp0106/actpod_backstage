@@ -284,24 +284,7 @@ class _SaleCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: item.isPackage
-                      ? const Color(0xFFE8F3FF)
-                      : const Color(0xFFFFF5D8),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  item.isPackage
-                      ? Icons.inventory_2_rounded
-                      : Icons.lock_open_rounded,
-                  color: item.isPackage
-                      ? const Color(0xFF2563EB)
-                      : const Color(0xFFB45309),
-                ),
-              ),
+              _SaleImage(item: item),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -315,10 +298,11 @@ class _SaleCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      item.subtitle,
-                      style: const TextStyle(color: Color(0xFF6B7280)),
-                    ),
+                    if (item.subtitle.isNotEmpty)
+                      Text(
+                        item.subtitle,
+                        style: const TextStyle(color: Color(0xFF6B7280)),
+                      ),
                   ],
                 ),
               ),
@@ -348,6 +332,55 @@ class _SaleCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SaleImage extends StatelessWidget {
+  final PremiumSaleEntry item;
+
+  const _SaleImage({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    if (item.imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Image.network(
+          item.imageUrl,
+          width: 56,
+          height: 56,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _FallbackSaleIcon(item: item),
+        ),
+      );
+    }
+    return _FallbackSaleIcon(item: item);
+  }
+}
+
+class _FallbackSaleIcon extends StatelessWidget {
+  final PremiumSaleEntry item;
+
+  const _FallbackSaleIcon({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: item.isPackage
+            ? const Color(0xFFE8F3FF)
+            : const Color(0xFFFFF5D8),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(
+        item.isPackage ? Icons.inventory_2_rounded : Icons.lock_open_rounded,
+        color: item.isPackage
+            ? const Color(0xFF2563EB)
+            : const Color(0xFFB45309),
       ),
     );
   }
