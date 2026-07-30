@@ -1,3 +1,5 @@
+import 'package:actpod_studio/utils/image_proxy.dart';
+
 class PackagePrice {
   final String packagePriceId;
   final String priceType;
@@ -420,7 +422,7 @@ class PackageStoryInfo {
       previewUrl: _string(json['previewUrl']),
       storyName: _string(json['storyName']),
       storyDescription: _string(json['storyDescription']),
-      storyImageUrls: _stringList(json['storyImageUrls']),
+      storyImageUrls: addImgProxyList(_stringList(json['storyImageUrls'])),
       storyLength: _int(json['storyLength']),
       storyUploadTime: _dateTime(json['storyUploadTime']),
       count: _int(json['count']),

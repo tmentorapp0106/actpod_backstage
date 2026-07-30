@@ -1,3 +1,5 @@
+import 'package:actpod_studio/utils/image_proxy.dart';
+
 class GetStoriesByUserIdRes {
   String code;
   String message;
@@ -102,8 +104,8 @@ class StoryItem {
       _string(json["storyDescription"]),
       _int(json["storyLength"]),
       _int(json["totalLength"]),
-      _string(json["storyImageUrl"]),
-      _stringList(json["storyImageUrls"]),
+      addImgProxy(_string(json["storyImageUrl"])),
+      addImgProxyList(_stringList(json["storyImageUrls"])),
       _dateTime(json["storyUploadTime"]),
       Review.fromJson(json["review"] as Map<String, dynamic>?),
       _int(json["count"]),
