@@ -354,6 +354,8 @@ class SingleCreateController extends Notifier<SingleCreateState> {
     try {
       if (!kIsWeb && _hasRealFilePath(audio)) {
         duration = await _probeDurationFromFilePath(audio.path);
+      } else if (kIsWeb && _hasPlayableUrl(audio)) {
+        duration = await _probeDurationFromUrl(audio.path);
       } else {
         if (bytes.isEmpty && audio.readStream != null) {
           bytes = await _readAllBytes(audio.readStream!);
@@ -387,6 +389,8 @@ class SingleCreateController extends Notifier<SingleCreateState> {
     try {
       if (!kIsWeb && _hasRealFilePath(audio)) {
         await player.setFilePath(audio.path);
+      } else if (kIsWeb && _hasPlayableUrl(audio)) {
+        await player.setUrl(audio.path);
       } else if (audio.fileBytes.isNotEmpty) {
         await player.setUrl(
           Uri.dataFromBytes(
@@ -469,6 +473,12 @@ class SingleCreateController extends Notifier<SingleCreateState> {
     return audio.path.isNotEmpty && audio.path != audio.fileName;
   }
 
+  bool _hasPlayableUrl(UploadedAudio audio) {
+    return audio.path.startsWith('blob:') ||
+        audio.path.startsWith('http://') ||
+        audio.path.startsWith('https://');
+  }
+
   UploadedAudio? _findAudio(String audioId) {
     for (final audio in state.audios) {
       if (audio.id == audioId) return audio;
@@ -524,6 +534,25 @@ class SingleCreateController extends Notifier<SingleCreateState> {
     final player = AudioPlayer();
     try {
       await player.setFilePath(path);
+      var duration = player.duration ?? Duration.zero;
+      if (duration == Duration.zero) {
+        final streamDuration = await player.durationStream
+            .firstWhere((d) => d != null)
+            .timeout(const Duration(seconds: 3), onTimeout: () => null);
+        duration = streamDuration ?? Duration.zero;
+      }
+      return duration;
+    } catch (_) {
+      return Duration.zero;
+    } finally {
+      await player.dispose();
+    }
+  }
+
+  Future<Duration> _probeDurationFromUrl(String url) async {
+    final player = AudioPlayer();
+    try {
+      await player.setUrl(url);
       var duration = player.duration ?? Duration.zero;
       if (duration == Duration.zero) {
         final streamDuration = await player.durationStream

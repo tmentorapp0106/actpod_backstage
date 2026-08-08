@@ -1,5 +1,6 @@
 import 'package:actpod_studio/app/theme/theme.dart';
 import 'package:actpod_studio/features/create_story/controllers/single_create_controller.dart';
+import 'package:actpod_studio/features/create_story/utils/audio_file_picker.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -21,16 +22,10 @@ class UploadArea extends ConsumerWidget {
 
   Future<void> _pick(WidgetRef ref) async {
     ref.read(singleCreateControllerProvider.notifier).setLoadingAudio(true);
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
-      type: FileType.custom,
-      allowedExtensions: allowedExtensions,
-      withData: false,
-      withReadStream: true,
-    );
+    final files = await pickAudioFiles(allowedExtensions: allowedExtensions);
     ref.read(singleCreateControllerProvider.notifier).setLoadingAudio(false);
-    if (result != null && result.files.isNotEmpty) {
-      onChanged(result.files);
+    if (files != null && files.isNotEmpty) {
+      onChanged(files);
     }
   }
 

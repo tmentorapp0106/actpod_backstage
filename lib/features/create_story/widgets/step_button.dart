@@ -781,6 +781,19 @@ class _StepButtonState extends ConsumerState<StepButton> {
       );
     }
 
+    if (kIsWeb && _hasPlayableUrl(audio)) {
+      final duration = audio.duration == Duration.zero
+          ? await _probeDurationFromUrl(audio.path)
+          : audio.duration;
+      return _PreparedUploadAudio(
+        fileName: audio.fileName,
+        fileBytes: Uint8List(0),
+        readStream: audio.readStream,
+        fileSize: audio.fileSize,
+        duration: duration,
+      );
+    }
+
     if (audio.fileBytes.isNotEmpty) {
       final duration = audio.duration == Duration.zero
           ? await _probeDurationFromBytes(audio.fileBytes, audio.fileName)
@@ -833,6 +846,25 @@ class _StepButtonState extends ConsumerState<StepButton> {
     }
   }
 
+  Future<Duration> _probeDurationFromUrl(String url) async {
+    final player = AudioPlayer();
+    try {
+      await player.setUrl(url);
+      var duration = player.duration ?? Duration.zero;
+      if (duration == Duration.zero) {
+        final streamDuration = await player.durationStream
+            .firstWhere((d) => d != null)
+            .timeout(const Duration(seconds: 3), onTimeout: () => null);
+        duration = streamDuration ?? Duration.zero;
+      }
+      return duration;
+    } catch (_) {
+      return Duration.zero;
+    } finally {
+      await player.dispose();
+    }
+  }
+
   Future<Duration> _probeDurationFromBytes(
     Uint8List bytes,
     String fileName,
@@ -867,6 +899,12 @@ class _StepButtonState extends ConsumerState<StepButton> {
 
   bool _hasRealFilePath(UploadedAudio audio) {
     return audio.path.isNotEmpty && audio.path != audio.fileName;
+  }
+
+  bool _hasPlayableUrl(UploadedAudio audio) {
+    return audio.path.startsWith('blob:') ||
+        audio.path.startsWith('http://') ||
+        audio.path.startsWith('https://');
   }
 
   String _mimeFromName(String name) {

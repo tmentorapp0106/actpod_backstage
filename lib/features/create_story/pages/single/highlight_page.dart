@@ -55,6 +55,12 @@ class _HighlightStepState extends ConsumerState<HighlightStep> {
         await _player.setAudioSource(AudioSource.uri(uri));
       }
       // ✅ 否則用 path（本機或遠端 URL）
+      else if (audio.path.startsWith('blob:') ||
+          audio.path.startsWith('http://') ||
+          audio.path.startsWith('https://')) {
+        await _player.setAudioSource(AudioSource.uri(Uri.parse(audio.path)));
+      }
+      // ✅ 否則用 path（本機）
       else if (audio.path.isNotEmpty) {
         // 如果是本機檔案
         await _player.setAudioSource(AudioSource.file(audio.path));
@@ -149,7 +155,6 @@ class _HighlightStepState extends ConsumerState<HighlightStep> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(singleCreateControllerProvider);
     final ctrl = ref.read(singleCreateControllerProvider.notifier);
 
     final brand = context.color.brand;

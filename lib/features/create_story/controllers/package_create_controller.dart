@@ -4,6 +4,7 @@ import 'package:actpod_studio/api/response/story_response/package_models.dart';
 import 'package:actpod_studio/features/create_story/controllers/create_shared_models.dart';
 import 'package:actpod_studio/features/create_story/models/channel_model.dart';
 import 'package:actpod_studio/features/create_story/models/space_model.dart';
+import 'package:actpod_studio/features/create_story/utils/audio_file_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -541,16 +542,10 @@ class PackageCreateController extends Notifier<PackageCreateState> {
 
     state = state.copyWith(uploadingAudio: true, pickingAudioStoryId: storyId);
     try {
-      final result = await FilePicker.platform.pickFiles(
-        allowMultiple: false,
-        type: FileType.custom,
-        allowedExtensions: const ['mp3'],
-        withData: false,
-        withReadStream: true,
-      );
-      if (result == null || result.files.isEmpty) return;
+      final files = await pickAudioFiles(allowedExtensions: const ['mp3']);
+      if (files == null || files.isEmpty) return;
 
-      final file = result.files.first;
+      final file = files.first;
       final audio = UploadedAudio(
         id: _genId(file.name),
         name: file.name,
@@ -604,6 +599,8 @@ class PackageCreateController extends Notifier<PackageCreateState> {
       try {
         if (!kIsWeb && _hasRealFilePath(audio)) {
           await player.setFilePath(audio.path);
+        } else if (kIsWeb && _hasPlayableUrl(audio)) {
+          await player.setUrl(audio.path);
         } else {
           if (bytes.isEmpty && audio.readStream != null) {
             bytes = await _readAllBytes(audio.readStream!);
@@ -741,6 +738,12 @@ class PackageCreateController extends Notifier<PackageCreateState> {
 
   bool _hasRealFilePath(UploadedAudio audio) {
     return audio.path.isNotEmpty && audio.path != audio.fileName;
+  }
+
+  bool _hasPlayableUrl(UploadedAudio audio) {
+    return audio.path.startsWith('blob:') ||
+        audio.path.startsWith('http://') ||
+        audio.path.startsWith('https://');
   }
 
   Future<Uint8List> _readAllBytes(Stream<List<int>> stream) async {
