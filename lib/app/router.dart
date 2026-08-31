@@ -2,6 +2,7 @@ import 'package:actpod_studio/api/response/story_response/batch_get_user_stories
 import 'package:actpod_studio/features/create_story/create_story.dart';
 import 'package:actpod_studio/features/donation/donation.dart';
 import 'package:actpod_studio/features/interactive_managment/interactive_managment.dart';
+import 'package:actpod_studio/features/live_host/live_host.dart';
 import 'package:actpod_studio/features/login_page.dart';
 import 'package:actpod_studio/features/premium_sales/models/premium_sales_models.dart';
 import 'package:actpod_studio/features/premium_sales/pages/purchase_record_detail_page.dart';
@@ -120,6 +121,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const InteractiveManagmentPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/live_host',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const LiveHostPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

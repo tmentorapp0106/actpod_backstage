@@ -89,6 +89,7 @@ class _SideNav extends StatelessWidget {
       _NavItem('Donation', Icons.payments_rounded, '/donations'),
       _NavItem('提領', Icons.account_balance_wallet_rounded, '/withdraws'),
       _NavItem('互動管理', Icons.forum_rounded, '/interactive_managment'),
+      _NavItem('直播主持', Icons.podcasts_rounded, '/live_host'),
       _NavItem('新建故事', Icons.add_box_rounded, '/publish/0'),
     ];
 
