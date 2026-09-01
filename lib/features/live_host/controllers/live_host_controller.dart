@@ -100,6 +100,10 @@ class LiveHostController extends Notifier<LiveHostState> {
   }
 
   void updateCapacity(String value) {
+    if (value.isEmpty) {
+      state = state.copyWith(capacity: 0);
+      return;
+    }
     final next = int.tryParse(value);
     if (next == null) return;
     state = state.copyWith(capacity: next);

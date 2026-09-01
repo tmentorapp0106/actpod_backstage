@@ -557,25 +557,41 @@ class _LiveRoomStep extends StatelessWidget {
       key: const ValueKey('live-host-live-room'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
-            Icon(Icons.podcasts_rounded, color: AppColors.brand, size: 32),
-            SizedBox(width: 12),
+            _StatusBadge(status: state.status),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '直播主持',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+                    state.roomTitle.isEmpty ? '直播控制台' : state.roomTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
-                    '直播已建立，可複製分享連結給聽眾。',
-                    style: TextStyle(color: Color(0xFF6B7280)),
+                    state.roomId.isEmpty ? 'Room ID -' : 'Room ID 已建立',
+                    style: const TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
+            ),
+            const SizedBox(width: 16),
+            OutlinedButton.icon(
+              onPressed: state.status == LiveHostStatus.live
+                  ? () => _confirmCloseRoom(context, onCloseRoom)
+                  : null,
+              icon: const Icon(Icons.stop_circle_rounded),
+              label: const Text('關閉直播'),
             ),
           ],
         ),
@@ -591,7 +607,6 @@ class _LiveRoomStep extends StatelessWidget {
               final storyCard = _SelectedStoryCard(story: story);
               final roomInfoCard = _RoomInfoCard(
                 state: state,
-                onCloseRoom: onCloseRoom,
                 onStartNewLive: onStartNewLive,
               );
               final playerCard = _PlayerControlCard(
@@ -619,29 +634,39 @@ class _LiveRoomStep extends StatelessWidget {
                 );
               }
 
-              return Column(
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(
-                    flex: 3,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Column(
                       children: [
-                        SizedBox(width: 340, child: storyCard),
-                        const SizedBox(width: 16),
-                        Expanded(child: playerCard),
-                        const SizedBox(width: 16),
-                        SizedBox(width: 360, child: roomInfoCard),
+                        SizedBox(
+                          height: 320,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SizedBox(
+                                width: 320,
+                                child: SingleChildScrollView(child: storyCard),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(child: playerCard),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Expanded(child: chatCard),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    flex: 4,
-                    child: Row(
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: 360,
+                    child: Column(
                       children: [
-                        Expanded(child: chatCard),
-                        const SizedBox(width: 16),
-                        SizedBox(width: 360, child: membersCard),
+                        roomInfoCard,
+                        const SizedBox(height: 16),
+                        Expanded(child: membersCard),
                       ],
                     ),
                   ),
@@ -721,13 +746,25 @@ class _PlayerControlCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
-            Slider(
-              value: positionMs,
-              min: 0,
-              max: maxMs,
-              onChanged: isLive && !isPending ? onSeek : null,
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: AppColors.brand,
+                inactiveTrackColor: const Color(0xFFE5E7EB),
+                disabledActiveTrackColor: const Color(0xFFFBBF24),
+                disabledInactiveTrackColor: const Color(0xFFE5E7EB),
+                thumbColor: AppColors.brand,
+                disabledThumbColor: const Color(0xFFFBBF24),
+                overlayColor: AppColors.brand.withValues(alpha: 0.14),
+                trackHeight: 6,
+              ),
+              child: Slider(
+                value: positionMs,
+                min: 0,
+                max: maxMs,
+                onChanged: isLive && !isPending ? onSeek : null,
+              ),
             ),
-            const SizedBox(height: 8),
+            const Spacer(),
             const Text(
               '播放、暫停與拖曳進度會同步送給直播間聽眾。',
               style: TextStyle(color: Color(0xFF6B7280)),
@@ -736,6 +773,34 @@ class _PlayerControlCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+Future<void> _confirmCloseRoom(
+  BuildContext context,
+  Future<void> Function() onCloseRoom,
+) async {
+  final shouldClose = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('關閉直播'),
+        content: const Text('確定要關閉目前直播房間嗎？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('關閉直播'),
+          ),
+        ],
+      );
+    },
+  );
+  if (shouldClose == true) {
+    await onCloseRoom();
   }
 }
 
@@ -922,14 +987,9 @@ class _MemberTile extends StatelessWidget {
 
 class _RoomInfoCard extends StatelessWidget {
   final LiveHostState state;
-  final Future<void> Function() onCloseRoom;
   final VoidCallback onStartNewLive;
 
-  const _RoomInfoCard({
-    required this.state,
-    required this.onCloseRoom,
-    required this.onStartNewLive,
-  });
+  const _RoomInfoCard({required this.state, required this.onStartNewLive});
 
   @override
   Widget build(BuildContext context) {
@@ -938,116 +998,149 @@ class _RoomInfoCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                _StatusBadge(status: state.status),
-                const Spacer(),
-                OutlinedButton.icon(
-                  onPressed: state.status == LiveHostStatus.live
-                      ? () => _confirmCloseRoom(context)
-                      : null,
-                  icon: const Icon(Icons.stop_circle_rounded),
-                  label: const Text('關閉直播'),
-                ),
-              ],
-            ),
-            if (state.status == LiveHostStatus.closed) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        '直播已關閉，可以重新開始新的直播流程。',
-                        style: TextStyle(color: Color(0xFF4B5563)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: onStartNewLive,
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('重新開始直播'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 18),
-            _InfoRow(label: '房間標題', value: state.roomTitle),
-            const SizedBox(height: 10),
-            _InfoRow(label: 'Room ID', value: state.roomId),
-            const SizedBox(height: 10),
-            _InfoRow(
-              label: '直播模式',
-              value: state.roomType == LiveHostRoomType.listenOnly
-                  ? '陪聽直播'
-                  : '互動直播',
-            ),
-            const SizedBox(height: 18),
-            InputDecorator(
-              decoration: InputDecoration(
-                labelText: '分享連結',
-                prefixIcon: const Icon(Icons.link_rounded),
-                suffixIcon: IconButton(
-                  tooltip: '複製分享連結',
-                  onPressed: shareUrl.isEmpty
-                      ? null
-                      : () => _copyShareUrl(context, shareUrl),
-                  icon: const Icon(Icons.copy_rounded),
-                ),
-              ),
-              child: SelectableText(
-                shareUrl.isEmpty ? '-' : shareUrl,
-                maxLines: 2,
-              ),
-            ),
-          ],
+        child: _RoomInfoSection(
+          state: state,
+          onStartNewLive: onStartNewLive,
+          shareUrl: shareUrl,
+          onCopyShareUrl: shareUrl.isEmpty
+              ? null
+              : () => _copyShareUrl(context, shareUrl),
         ),
       ),
     );
   }
+}
 
-  Future<void> _confirmCloseRoom(BuildContext context) async {
-    final shouldClose = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('關閉直播'),
-          content: const Text('確定要關閉目前直播房間嗎？'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('取消'),
+class _RoomInfoSection extends StatelessWidget {
+  final LiveHostState state;
+  final VoidCallback onStartNewLive;
+  final String shareUrl;
+  final VoidCallback? onCopyShareUrl;
+
+  const _RoomInfoSection({
+    required this.state,
+    required this.onStartNewLive,
+    required this.shareUrl,
+    required this.onCopyShareUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (state.status == LiveHostStatus.closed) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(8),
             ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('關閉直播'),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '直播已關閉，可以重新開始新的直播流程。',
+                    style: TextStyle(color: Color(0xFF4B5563)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                FilledButton.icon(
+                  onPressed: onStartNewLive,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('重新開始直播'),
+                ),
+              ],
             ),
-          ],
-        );
-      },
+          ),
+          const SizedBox(height: 18),
+        ],
+        _InfoRow(label: '房間標題', value: state.roomTitle),
+        const SizedBox(height: 10),
+        _InfoRow(label: 'Room ID', value: state.roomId),
+        const SizedBox(height: 10),
+        _InfoRow(
+          label: '直播模式',
+          value: state.roomType == LiveHostRoomType.listenOnly
+              ? '陪聽直播'
+              : '互動直播',
+        ),
+        const SizedBox(height: 18),
+        _ShareLinkBox(shareUrl: shareUrl, onCopy: onCopyShareUrl),
+      ],
     );
-    if (shouldClose == true) {
-      await onCloseRoom();
-    }
   }
+}
 
-  Future<void> _copyShareUrl(BuildContext context, String shareUrl) async {
-    await Clipboard.setData(ClipboardData(text: shareUrl));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('已複製分享連結')));
+Future<void> _copyShareUrl(BuildContext context, String shareUrl) async {
+  await Clipboard.setData(ClipboardData(text: shareUrl));
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(const SnackBar(content: Text('已複製分享連結')));
+}
+
+class _ShareLinkBox extends StatelessWidget {
+  final String shareUrl;
+  final VoidCallback? onCopy;
+
+  const _ShareLinkBox({required this.shareUrl, required this.onCopy});
+
+  @override
+  Widget build(BuildContext context) {
+    final displayUrl = shareUrl.isEmpty ? '-' : shareUrl;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '分享連結',
+          style: TextStyle(
+            color: Color(0xFF6B7280),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 48,
+          padding: const EdgeInsets.only(left: 14, right: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9FAFB),
+            border: Border.all(color: const Color(0xFFD1D5DB)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.link_rounded,
+                size: 20,
+                color: Color(0xFF6B7280),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Tooltip(
+                  message: displayUrl,
+                  waitDuration: const Duration(milliseconds: 500),
+                  child: Text(
+                    displayUrl,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: '複製分享連結',
+                onPressed: onCopy,
+                icon: const Icon(Icons.copy_rounded),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -1185,7 +1278,7 @@ class _SelectedStoryCard extends StatelessWidget {
   }
 }
 
-class _LiveSettingsForm extends StatelessWidget {
+class _LiveSettingsForm extends StatefulWidget {
   final LiveHostState state;
   final ValueChanged<String> onTitleChanged;
   final ValueChanged<LiveHostRoomType> onRoomTypeChanged;
@@ -1205,7 +1298,84 @@ class _LiveSettingsForm extends StatelessWidget {
   });
 
   @override
+  State<_LiveSettingsForm> createState() => _LiveSettingsFormState();
+}
+
+class _LiveSettingsFormState extends State<_LiveSettingsForm> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _capacityController;
+  late final TextEditingController _notyetOwnedPriceController;
+  late final TextEditingController _alreadyOwnedPriceController;
+  final _titleFocusNode = FocusNode();
+  final _capacityFocusNode = FocusNode();
+  final _notyetOwnedPriceFocusNode = FocusNode();
+  final _alreadyOwnedPriceFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.state.roomTitle);
+    _capacityController = TextEditingController(
+      text: widget.state.capacity == 0 ? '' : widget.state.capacity.toString(),
+    );
+    _notyetOwnedPriceController = TextEditingController(
+      text: widget.state.notyetOwnedStoryPrice.toString(),
+    );
+    _alreadyOwnedPriceController = TextEditingController(
+      text: widget.state.alreadyOwnedStoryPrice.toString(),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _LiveSettingsForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncControllerText(
+      controller: _titleController,
+      focusNode: _titleFocusNode,
+      value: widget.state.roomTitle,
+    );
+    _syncControllerText(
+      controller: _capacityController,
+      focusNode: _capacityFocusNode,
+      value: widget.state.capacity == 0 ? '' : widget.state.capacity.toString(),
+    );
+    _syncControllerText(
+      controller: _notyetOwnedPriceController,
+      focusNode: _notyetOwnedPriceFocusNode,
+      value: widget.state.notyetOwnedStoryPrice.toString(),
+    );
+    _syncControllerText(
+      controller: _alreadyOwnedPriceController,
+      focusNode: _alreadyOwnedPriceFocusNode,
+      value: widget.state.alreadyOwnedStoryPrice.toString(),
+    );
+  }
+
+  void _syncControllerText({
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required String value,
+  }) {
+    if (focusNode.hasFocus || controller.text == value) return;
+    controller.text = value;
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _capacityController.dispose();
+    _notyetOwnedPriceController.dispose();
+    _alreadyOwnedPriceController.dispose();
+    _titleFocusNode.dispose();
+    _capacityFocusNode.dispose();
+    _notyetOwnedPriceFocusNode.dispose();
+    _alreadyOwnedPriceFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
     final numberFormatters = [
       FilteringTextInputFormatter.digitsOnly,
       LengthLimitingTextInputFormatter(6),
@@ -1219,8 +1389,9 @@ class _LiveSettingsForm extends StatelessWidget {
           children: [
             TextFormField(
               key: ValueKey('room-title-${state.selectedStory?.storyId ?? ''}'),
-              initialValue: state.roomTitle,
-              onChanged: onTitleChanged,
+              controller: _titleController,
+              focusNode: _titleFocusNode,
+              onChanged: widget.onTitleChanged,
               decoration: InputDecoration(
                 labelText: '房間標題',
                 hintText: state.selectedStory?.storyName ?? '輸入直播房間標題',
@@ -1248,13 +1419,15 @@ class _LiveSettingsForm extends StatelessWidget {
                 ),
               ],
               selected: {state.roomType},
-              onSelectionChanged: (values) => onRoomTypeChanged(values.first),
+              onSelectionChanged: (values) =>
+                  widget.onRoomTypeChanged(values.first),
             ),
             const SizedBox(height: 18),
             TextFormField(
-              initialValue: state.capacity.toString(),
+              controller: _capacityController,
+              focusNode: _capacityFocusNode,
               enabled: state.roomType == LiveHostRoomType.interactive,
-              onChanged: onCapacityChanged,
+              onChanged: widget.onCapacityChanged,
               keyboardType: TextInputType.number,
               inputFormatters: numberFormatters,
               decoration: InputDecoration(
@@ -1270,7 +1443,7 @@ class _LiveSettingsForm extends StatelessWidget {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: state.notifyFans,
-              onChanged: onNotifyFansChanged,
+              onChanged: widget.onNotifyFansChanged,
               title: const Text('通知粉絲'),
               subtitle: const Text('開播時通知追蹤者'),
               secondary: const Icon(Icons.notifications_active_rounded),
@@ -1280,8 +1453,9 @@ class _LiveSettingsForm extends StatelessWidget {
               children: [
                 Expanded(
                   child: TextFormField(
-                    initialValue: state.notyetOwnedStoryPrice.toString(),
-                    onChanged: onNotyetOwnedPriceChanged,
+                    controller: _notyetOwnedPriceController,
+                    focusNode: _notyetOwnedPriceFocusNode,
+                    onChanged: widget.onNotyetOwnedPriceChanged,
                     keyboardType: TextInputType.number,
                     inputFormatters: numberFormatters,
                     decoration: InputDecoration(
@@ -1297,8 +1471,9 @@ class _LiveSettingsForm extends StatelessWidget {
                 const SizedBox(width: 14),
                 Expanded(
                   child: TextFormField(
-                    initialValue: state.alreadyOwnedStoryPrice.toString(),
-                    onChanged: onAlreadyOwnedPriceChanged,
+                    controller: _alreadyOwnedPriceController,
+                    focusNode: _alreadyOwnedPriceFocusNode,
+                    onChanged: widget.onAlreadyOwnedPriceChanged,
                     keyboardType: TextInputType.number,
                     inputFormatters: numberFormatters,
                     decoration: InputDecoration(

@@ -41,11 +41,14 @@ class LiveHostWsService {
   }
 
   Future<void> close() async {
+    final hadConnection = _subscription != null || _channel != null;
     await _subscription?.cancel();
     _subscription = null;
     await _channel?.sink.close(1000);
     _channel = null;
-    _connectionState.add(false);
+    if (hadConnection) {
+      _connectionState.add(false);
+    }
   }
 
   Future<void> dispose() async {
