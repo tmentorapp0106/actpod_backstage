@@ -55,6 +55,12 @@ class _LiveHostPageState extends ConsumerState<LiveHostPage> {
               await ref
                   .read(liveHostPlayerControllerProvider.notifier)
                   .disposePlayer();
+              ref.read(liveHostChatControllerProvider.notifier).reset();
+              ref.read(liveHostMembersControllerProvider.notifier).reset();
+              ref
+                  .read(liveHostRoomControllerProvider.notifier)
+                  .resetForNewLive();
+              ref.read(liveHostFlowControllerProvider.notifier).backToLanding();
             },
             onStartNewLive: () => _startNewLiveFlow(ref),
           ),
