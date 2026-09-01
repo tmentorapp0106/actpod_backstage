@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class LiveHostWsService {
@@ -69,3 +70,11 @@ class LiveHostWsService {
     }
   }
 }
+
+final liveHostWsServiceProvider = Provider.autoDispose<LiveHostWsService>((
+  ref,
+) {
+  final service = LiveHostWsService();
+  ref.onDispose(() => unawaited(service.dispose()));
+  return service;
+});
