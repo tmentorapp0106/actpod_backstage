@@ -557,45 +557,6 @@ class _LiveRoomStep extends StatelessWidget {
       key: const ValueKey('live-host-live-room'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            _StatusBadge(status: state.status),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    state.roomTitle.isEmpty ? '直播控制台' : state.roomTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    state.roomId.isEmpty ? 'Room ID -' : 'Room ID 已建立',
-                    style: const TextStyle(
-                      color: Color(0xFF6B7280),
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            OutlinedButton.icon(
-              onPressed: state.status == LiveHostStatus.live
-                  ? () => _confirmCloseRoom(context, onCloseRoom)
-                  : null,
-              icon: const Icon(Icons.stop_circle_rounded),
-              label: const Text('關閉直播'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
         if (state.error != null) ...[
           _ErrorBanner(message: state.error!),
           const SizedBox(height: 16),
@@ -604,13 +565,14 @@ class _LiveRoomStep extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final isNarrow = constraints.maxWidth < 900;
-              final storyCard = _SelectedStoryCard(story: story);
               final roomInfoCard = _RoomInfoCard(
                 state: state,
                 onStartNewLive: onStartNewLive,
               );
               final playerCard = _PlayerControlCard(
                 state: state,
+                story: story,
+                onCloseRoom: onCloseRoom,
                 onPlay: onPlayPodcast,
                 onPause: onPausePodcast,
                 onSeek: onSeekPodcast,
@@ -621,11 +583,9 @@ class _LiveRoomStep extends StatelessWidget {
               if (isNarrow) {
                 return ListView(
                   children: [
-                    storyCard,
+                    playerCard,
                     const SizedBox(height: 16),
                     roomInfoCard,
-                    const SizedBox(height: 16),
-                    playerCard,
                     const SizedBox(height: 16),
                     chatCard,
                     const SizedBox(height: 16),
@@ -640,20 +600,7 @@ class _LiveRoomStep extends StatelessWidget {
                   Expanded(
                     child: Column(
                       children: [
-                        SizedBox(
-                          height: 320,
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              SizedBox(
-                                width: 320,
-                                child: SingleChildScrollView(child: storyCard),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(child: playerCard),
-                            ],
-                          ),
-                        ),
+                        SizedBox(height: 250, child: playerCard),
                         const SizedBox(height: 16),
                         Expanded(child: chatCard),
                       ],
@@ -682,12 +629,16 @@ class _LiveRoomStep extends StatelessWidget {
 
 class _PlayerControlCard extends StatelessWidget {
   final LiveHostState state;
+  final StoryItem? story;
+  final Future<void> Function() onCloseRoom;
   final Future<void> Function() onPlay;
   final Future<void> Function() onPause;
   final ValueChanged<double> onSeek;
 
   const _PlayerControlCard({
     required this.state,
+    required this.story,
+    required this.onCloseRoom,
     required this.onPlay,
     required this.onPause,
     required this.onSeek,
@@ -709,69 +660,206 @@ class _PlayerControlCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '播放器控制',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 18),
-            Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < 700;
+            final storyPane = _StoryControlPreview(story: story);
+            final controls = _PlayerControls(
+              state: state,
+              positionMs: positionMs,
+              maxMs: maxMs,
+              isLive: isLive,
+              isPlaying: isPlaying,
+              isPending: isPending,
+              onCloseRoom: onCloseRoom,
+              onPlay: onPlay,
+              onPause: onPause,
+              onSeek: onSeek,
+            );
+
+            if (isCompact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [storyPane, const SizedBox(height: 16), controls],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                FilledButton.icon(
-                  onPressed: !isLive || isPending
-                      ? null
-                      : isPlaying
-                      ? onPause
-                      : onPlay,
-                  icon: isPending
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(
-                          isPlaying
-                              ? Icons.pause_rounded
-                              : Icons.play_arrow_rounded,
-                        ),
-                  label: Text(isPending ? '同步中' : (isPlaying ? '暫停' : '播放')),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  '${_formatDuration(state.currentPosition)} / ${_formatDuration(state.duration)}',
-                  style: const TextStyle(color: Color(0xFF6B7280)),
-                ),
+                SizedBox(width: 210, child: storyPane),
+                const SizedBox(width: 22),
+                Expanded(child: controls),
               ],
-            ),
-            const SizedBox(height: 18),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: AppColors.brand,
-                inactiveTrackColor: const Color(0xFFE5E7EB),
-                disabledActiveTrackColor: const Color(0xFFFBBF24),
-                disabledInactiveTrackColor: const Color(0xFFE5E7EB),
-                thumbColor: AppColors.brand,
-                disabledThumbColor: const Color(0xFFFBBF24),
-                overlayColor: AppColors.brand.withValues(alpha: 0.14),
-                trackHeight: 6,
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _StoryControlPreview extends StatelessWidget {
+  final StoryItem? story;
+
+  const _StoryControlPreview({required this.story});
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedStory = story;
+    final imageUrl = _storyImageUrl(selectedStory);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox.square(
+          dimension: 150,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: imageUrl.isEmpty
+                ? Container(
+                    color: const Color(0xFFF3F4F6),
+                    child: const Icon(Icons.auto_stories_rounded),
+                  )
+                : Image.network(imageUrl, fit: BoxFit.cover),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          selectedStory?.storyName ?? '尚未選擇故事',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        if (selectedStory != null) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _StoryMetaChip(
+                icon: Icons.folder_rounded,
+                label: selectedStory.channelName.isEmpty
+                    ? '未分類頻道'
+                    : selectedStory.channelName,
               ),
-              child: Slider(
-                value: positionMs,
-                min: 0,
-                max: maxMs,
-                onChanged: isLive && !isPending ? onSeek : null,
+              _StoryMetaChip(
+                icon: selectedStory.isPremium
+                    ? Icons.lock_rounded
+                    : Icons.lock_open_rounded,
+                label: selectedStory.isPremium ? '付費' : '免費',
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _PlayerControls extends StatelessWidget {
+  final LiveHostState state;
+  final double positionMs;
+  final double maxMs;
+  final bool isLive;
+  final bool isPlaying;
+  final bool isPending;
+  final Future<void> Function() onCloseRoom;
+  final Future<void> Function() onPlay;
+  final Future<void> Function() onPause;
+  final ValueChanged<double> onSeek;
+
+  const _PlayerControls({
+    required this.state,
+    required this.positionMs,
+    required this.maxMs,
+    required this.isLive,
+    required this.isPlaying,
+    required this.isPending,
+    required this.onCloseRoom,
+    required this.onPlay,
+    required this.onPause,
+    required this.onSeek,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _StatusBadge(status: state.status),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                '播放器控制',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
               ),
             ),
-            const Spacer(),
-            const Text(
-              '播放、暫停與拖曳進度會同步送給直播間聽眾。',
-              style: TextStyle(color: Color(0xFF6B7280)),
+            OutlinedButton.icon(
+              onPressed: state.status == LiveHostStatus.live
+                  ? () => _confirmCloseRoom(context, onCloseRoom)
+                  : null,
+              icon: const Icon(Icons.stop_circle_rounded),
+              label: const Text('關閉直播'),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            FilledButton.icon(
+              onPressed: !isLive || isPending
+                  ? null
+                  : isPlaying
+                  ? onPause
+                  : onPlay,
+              icon: isPending
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                    ),
+              label: Text(isPending ? '同步中' : (isPlaying ? '暫停' : '播放')),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '${_formatDuration(state.currentPosition)} / ${_formatDuration(state.duration)}',
+              style: const TextStyle(color: Color(0xFF6B7280)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: AppColors.brand,
+            inactiveTrackColor: const Color(0xFFE5E7EB),
+            disabledActiveTrackColor: const Color(0xFFFBBF24),
+            disabledInactiveTrackColor: const Color(0xFFE5E7EB),
+            thumbColor: AppColors.brand,
+            disabledThumbColor: const Color(0xFFFBBF24),
+            overlayColor: AppColors.brand.withValues(alpha: 0.14),
+            trackHeight: 6,
+          ),
+          child: Slider(
+            value: positionMs,
+            min: 0,
+            max: maxMs,
+            onChanged: isLive && !isPending ? onSeek : null,
+          ),
+        ),
+        const Spacer(),
+        const Text(
+          '播放、暫停與拖曳進度會同步送給直播間聽眾。',
+          style: TextStyle(color: Color(0xFF6B7280)),
+        ),
+      ],
     );
   }
 }
@@ -1206,6 +1294,12 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
+String _storyImageUrl(StoryItem? story) {
+  if (story == null) return '';
+  if (story.storyImageUrl.isNotEmpty) return story.storyImageUrl;
+  return story.storyImageUrls.isNotEmpty ? story.storyImageUrls.first : '';
+}
+
 class _SelectedStoryCard extends StatelessWidget {
   final StoryItem? story;
 
@@ -1214,13 +1308,7 @@ class _SelectedStoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectedStory = story;
-    final imageUrl = selectedStory == null
-        ? ''
-        : selectedStory.storyImageUrl.isNotEmpty
-        ? selectedStory.storyImageUrl
-        : (selectedStory.storyImageUrls.isNotEmpty
-              ? selectedStory.storyImageUrls.first
-              : '');
+    final imageUrl = _storyImageUrl(selectedStory);
 
     return Card(
       child: Padding(
