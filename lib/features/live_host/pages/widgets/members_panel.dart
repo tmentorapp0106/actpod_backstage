@@ -31,10 +31,14 @@ class _MembersPanel extends StatelessWidget {
           const Divider(height: 1),
           Expanded(
             child: state.members.isEmpty
-                ? const Center(
-                    child: Text(
-                      '目前沒有觀眾',
-                      style: TextStyle(color: Color(0xFF6B7280)),
+                ? const SingleChildScrollView(
+                    padding: EdgeInsets.all(16),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Text(
+                        '目前沒有觀眾',
+                        style: TextStyle(color: Color(0xFF6B7280)),
+                      ),
                     ),
                   )
                 : ListView.separated(

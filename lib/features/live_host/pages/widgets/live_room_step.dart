@@ -11,6 +11,7 @@ class _LiveRoomStep extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final userId = ref.watch(userControllerProvider)?.userId ?? '';
     final roomError = ref.watch(
       liveHostRoomControllerProvider.select((state) => state.error),
     );
@@ -76,7 +77,13 @@ class _LiveRoomStep extends ConsumerWidget {
               final chatCard = Consumer(
                 builder: (context, ref, _) {
                   final chat = ref.watch(liveHostChatControllerProvider);
-                  return _ChatPanel(state: _viewState(chat: chat));
+                  final room = ref.watch(liveHostRoomControllerProvider);
+                  return _ChatPanel(
+                    state: _viewState(chat: chat, room: room),
+                    onSend: (content) => ref
+                        .read(liveHostChatControllerProvider.notifier)
+                        .sendChat(userId: userId, content: content),
+                  );
                 },
               );
               final membersCard = Consumer(
@@ -93,9 +100,9 @@ class _LiveRoomStep extends ConsumerWidget {
                     const SizedBox(height: 16),
                     roomInfoCard,
                     const SizedBox(height: 16),
-                    chatCard,
+                    SizedBox(height: 420, child: chatCard),
                     const SizedBox(height: 16),
-                    membersCard,
+                    SizedBox(height: 320, child: membersCard),
                   ],
                 );
               }

@@ -8,6 +8,7 @@ class LiveHostChatMessage {
   final String avatarUrl;
   final String content;
   final String type;
+  final bool isHost;
 
   const LiveHostChatMessage({
     required this.userId,
@@ -15,6 +16,7 @@ class LiveHostChatMessage {
     required this.avatarUrl,
     required this.content,
     this.type = 'text',
+    this.isHost = false,
   });
 
   factory LiveHostChatMessage.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class LiveHostChatMessage {
       type: json['params'] is List && (json['params'] as List).isNotEmpty
           ? (json['params'] as List).first.toString()
           : 'text',
+      isHost: json['isHost'] == true,
     );
   }
 
@@ -37,6 +40,21 @@ class LiveHostChatMessage {
       avatarUrl: avatarUrl.isEmpty ? member.avatarUrl : avatarUrl,
       content: content,
       type: type,
+      isHost: isHost,
+    );
+  }
+
+  LiveHostChatMessage markHost({
+    required String nickname,
+    required String avatarUrl,
+  }) {
+    return LiveHostChatMessage(
+      userId: userId,
+      nickname: this.nickname.isEmpty ? nickname : this.nickname,
+      avatarUrl: this.avatarUrl.isEmpty ? avatarUrl : this.avatarUrl,
+      content: content,
+      type: type,
+      isHost: true,
     );
   }
 }
