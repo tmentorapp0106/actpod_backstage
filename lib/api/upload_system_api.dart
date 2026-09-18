@@ -4,6 +4,7 @@ import 'package:actpod_studio/api/api.dart';
 import 'package:actpod_studio/api/response/upload_response/upload_package_image.dart';
 import 'package:actpod_studio/api/response/upload_response/upload_story_content.dart';
 import 'package:actpod_studio/api/response/upload_response/upload_story_image.dart';
+import 'package:actpod_studio/api/signed_url_uploader.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:mime/mime.dart' as m;
@@ -11,8 +12,10 @@ import 'package:mime/mime.dart' as m;
 class UploadApi {
   Future<UploadStoryContentResponse> uploadStoryContent(
     String filename,
-    Uint8List bytes,
-  ) async {
+    Uint8List bytes, {
+    void Function(double progress)? onProgress,
+    void Function()? onWaitingForResponse,
+  }) async {
     final mimeType = _MimeHelper.resolve(
       filename,
       headerBytes: bytes.take(32).toList().cast<int>().asUint8List(),
@@ -28,10 +31,12 @@ class UploadApi {
       getUrlResponse,
     );
 
-    final response = await http.put(
+    final response = await putSignedUrlBytes(
       Uri.parse(uploadStoryContentResponse.signedUrl),
-      headers: {'Content-Type': mimeType},
-      body: bytes,
+      mimeType: mimeType,
+      bytes: bytes,
+      onProgress: onProgress,
+      onWaitingForResponse: onWaitingForResponse,
     );
 
     if (response.statusCode != 200) {
@@ -43,8 +48,10 @@ class UploadApi {
   Future<UploadStoryContentResponse> uploadStoryContentStream(
     String filename,
     Stream<List<int>> stream,
-    int contentLength,
-  ) async {
+    int contentLength, {
+    void Function(double progress)? onProgress,
+    void Function()? onWaitingForResponse,
+  }) async {
     final mimeType = _MimeHelper.resolve(filename);
     final contentType = _MimeHelper.toBackendContentType(filename);
 
@@ -57,16 +64,14 @@ class UploadApi {
       getUrlResponse,
     );
 
-    final request = http.StreamedRequest(
-      'PUT',
+    final response = await putSignedUrlStream(
       Uri.parse(uploadStoryContentResponse.signedUrl),
+      mimeType: mimeType,
+      stream: stream,
+      contentLength: contentLength,
+      onProgress: onProgress,
+      onWaitingForResponse: onWaitingForResponse,
     );
-    request.headers['Content-Type'] = mimeType;
-    request.contentLength = contentLength;
-    await request.sink.addStream(stream);
-    await request.sink.close();
-
-    final response = await request.send();
     if (response.statusCode != 200) {
       throw Exception('Upload failed: ${response.statusCode}');
     }

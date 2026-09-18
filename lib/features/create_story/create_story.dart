@@ -143,7 +143,22 @@ class _UploadProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final total = state.uploadItems.length;
     final completed = state.completedUploadCount;
-    final progress = total == 0 ? null : completed / total;
+    final activeProgress = state.uploadItems
+        .where((item) => item.status == UploadQueueItemStatus.active)
+        .fold<double>(0, (sum, item) => sum + (item.progress ?? 0));
+    final progress = total == 0 ? null : (completed + activeProgress) / total;
+    final activeItem = state.uploadItems
+        .where((item) => item.status == UploadQueueItemStatus.active)
+        .cast<UploadQueueItem?>()
+        .firstWhere((item) => item != null, orElse: () => null);
+    final activePercent = activeItem?.progress == null
+        ? null
+        : (activeItem!.progress! * 100).floor();
+    final activeStatusText = activeItem?.waitingForResponse == true
+        ? '確認上傳結果中...'
+        : activePercent == null
+        ? ''
+        : ' $activePercent%';
 
     return AppCard(
       child: Column(
@@ -157,7 +172,7 @@ class _UploadProgressCard extends StatelessWidget {
           Text(
             state.currentUploadLabel == null
                 ? '準備上傳中...'
-                : '目前處理: ${state.currentUploadLabel}',
+                : '目前處理: ${state.currentUploadLabel}$activeStatusText',
             style: const TextStyle(color: Colors.black87, height: 1.4),
           ),
           const SizedBox(height: 12),
@@ -177,13 +192,42 @@ class _UploadProgressCard extends StatelessWidget {
                   _UploadStatusIcon(status: item.status),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      item.label,
-                      style: TextStyle(
-                        color: item.status == UploadQueueItemStatus.done
-                            ? Colors.black54
-                            : Colors.black87,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.label,
+                          style: TextStyle(
+                            color: item.status == UploadQueueItemStatus.done
+                                ? Colors.black54
+                                : Colors.black87,
+                          ),
+                        ),
+                        if (item.progress != null) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: LinearProgressIndicator(
+                                  value: item.progress,
+                                  minHeight: 6,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                item.waitingForResponse
+                                    ? '確認中'
+                                    : '${(item.progress! * 100).floor()}%',
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],

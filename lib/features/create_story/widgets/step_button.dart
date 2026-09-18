@@ -437,8 +437,19 @@ class _StepButtonState extends ConsumerState<StepButton> {
                 audio.fileName,
                 audio.readStream!,
                 audio.fileSize,
+                onProgress: (progress) =>
+                    flowCtrl.updateUploadProgress('single-audio', progress),
+                onWaitingForResponse: () =>
+                    flowCtrl.markUploadWaitingForResponse('single-audio'),
               )
-            : _uploadStoryContent(audio.fileName, audio.fileBytes);
+            : _uploadStoryContent(
+                audio.fileName,
+                audio.fileBytes,
+                onProgress: (progress) =>
+                    flowCtrl.updateUploadProgress('single-audio', progress),
+                onWaitingForResponse: () =>
+                    flowCtrl.markUploadWaitingForResponse('single-audio'),
+              );
       },
     );
     final imageUrls = <String>[];
@@ -478,8 +489,27 @@ class _StepButtonState extends ConsumerState<StepButton> {
                 audio.fileName,
                 audio.readStream!,
                 audio.fileSize,
+                onProgress: (progress) => flowCtrl.updateUploadProgress(
+                  'package-story-audio-$storyIndex',
+                  progress,
+                ),
+                onWaitingForResponse: () =>
+                    flowCtrl.markUploadWaitingForResponse(
+                      'package-story-audio-$storyIndex',
+                    ),
               )
-            : _uploadStoryContent(audio.fileName, audio.fileBytes),
+            : _uploadStoryContent(
+                audio.fileName,
+                audio.fileBytes,
+                onProgress: (progress) => flowCtrl.updateUploadProgress(
+                  'package-story-audio-$storyIndex',
+                  progress,
+                ),
+                onWaitingForResponse: () =>
+                    flowCtrl.markUploadWaitingForResponse(
+                      'package-story-audio-$storyIndex',
+                    ),
+              ),
       );
       contentUrl = contentResponse.publicUrl;
       duration = audio.duration;
@@ -529,8 +559,27 @@ class _StepButtonState extends ConsumerState<StepButton> {
                 audio.fileName,
                 audio.readStream!,
                 audio.fileSize,
+                onProgress: (progress) => flowCtrl.updateUploadProgress(
+                  'package-story-audio-$storyIndex',
+                  progress,
+                ),
+                onWaitingForResponse: () =>
+                    flowCtrl.markUploadWaitingForResponse(
+                      'package-story-audio-$storyIndex',
+                    ),
               )
-            : _uploadStoryContent(audio.fileName, audio.fileBytes),
+            : _uploadStoryContent(
+                audio.fileName,
+                audio.fileBytes,
+                onProgress: (progress) => flowCtrl.updateUploadProgress(
+                  'package-story-audio-$storyIndex',
+                  progress,
+                ),
+                onWaitingForResponse: () =>
+                    flowCtrl.markUploadWaitingForResponse(
+                      'package-story-audio-$storyIndex',
+                    ),
+              ),
       );
       contentUrl = contentResponse.publicUrl;
       duration = audio.duration;
@@ -929,12 +978,22 @@ class _StepButtonState extends ConsumerState<StepButton> {
 
   Future<UploadStoryContentResponse> _uploadStoryContent(
     String fileName,
-    Uint8List fileBytes,
-  ) async {
+    Uint8List fileBytes, {
+    void Function(double progress)? onProgress,
+    void Function()? onWaitingForResponse,
+  }) async {
     if (!_useMockUpload) {
-      return UploadApi().uploadStoryContent(fileName, fileBytes);
+      return UploadApi().uploadStoryContent(
+        fileName,
+        fileBytes,
+        onProgress: onProgress,
+        onWaitingForResponse: onWaitingForResponse,
+      );
     }
+    onProgress?.call(0);
     await Future.delayed(const Duration(milliseconds: 900));
+    onProgress?.call(1);
+    onWaitingForResponse?.call();
     return UploadStoryContentResponse(
       code: '200',
       message: 'mock success',
@@ -946,16 +1005,23 @@ class _StepButtonState extends ConsumerState<StepButton> {
   Future<UploadStoryContentResponse> _uploadStoryContentStream(
     String fileName,
     Stream<List<int>> stream,
-    int contentLength,
-  ) async {
+    int contentLength, {
+    void Function(double progress)? onProgress,
+    void Function()? onWaitingForResponse,
+  }) async {
     if (!_useMockUpload) {
       return UploadApi().uploadStoryContentStream(
         fileName,
         stream,
         contentLength,
+        onProgress: onProgress,
+        onWaitingForResponse: onWaitingForResponse,
       );
     }
+    onProgress?.call(0);
     await Future.delayed(const Duration(milliseconds: 900));
+    onProgress?.call(1);
+    onWaitingForResponse?.call();
     return UploadStoryContentResponse(
       code: '200',
       message: 'mock success',

@@ -10,22 +10,30 @@ class UploadQueueItem {
   final String id;
   final String label;
   final UploadQueueItemStatus status;
+  final double? progress;
+  final bool waitingForResponse;
 
   const UploadQueueItem({
     required this.id,
     required this.label,
     this.status = UploadQueueItemStatus.pending,
+    this.progress,
+    this.waitingForResponse = false,
   });
 
   UploadQueueItem copyWith({
     String? id,
     String? label,
     UploadQueueItemStatus? status,
+    Object? progress = _unset,
+    bool? waitingForResponse,
   }) {
     return UploadQueueItem(
       id: id ?? this.id,
       label: label ?? this.label,
       status: status ?? this.status,
+      progress: progress == _unset ? this.progress : progress as double?,
+      waitingForResponse: waitingForResponse ?? this.waitingForResponse,
     );
   }
 }
@@ -117,7 +125,11 @@ class CreateFlowController extends Notifier<CreateFlowState> {
         if (item.id == id)
           (() {
             label = item.label;
-            return item.copyWith(status: UploadQueueItemStatus.active);
+            return item.copyWith(
+              status: UploadQueueItemStatus.active,
+              progress: null,
+              waitingForResponse: false,
+            );
           })()
         else if (item.status == UploadQueueItemStatus.active)
           item.copyWith(status: UploadQueueItemStatus.pending)
@@ -132,7 +144,35 @@ class CreateFlowController extends Notifier<CreateFlowState> {
       uploadItems: [
         for (final item in state.uploadItems)
           if (item.id == id)
-            item.copyWith(status: UploadQueueItemStatus.done)
+            item.copyWith(
+              status: UploadQueueItemStatus.done,
+              progress: 1.0,
+              waitingForResponse: false,
+            )
+          else
+            item,
+      ],
+    );
+  }
+
+  void updateUploadProgress(String id, double progress) {
+    state = state.copyWith(
+      uploadItems: [
+        for (final item in state.uploadItems)
+          if (item.id == id)
+            item.copyWith(progress: progress.clamp(0, 1).toDouble())
+          else
+            item,
+      ],
+    );
+  }
+
+  void markUploadWaitingForResponse(String id) {
+    state = state.copyWith(
+      uploadItems: [
+        for (final item in state.uploadItems)
+          if (item.id == id)
+            item.copyWith(progress: 1.0, waitingForResponse: true)
           else
             item,
       ],
@@ -151,7 +191,10 @@ class CreateFlowController extends Notifier<CreateFlowState> {
       uploadItems: [
         for (final item in state.uploadItems)
           if (item.id == id)
-            item.copyWith(status: UploadQueueItemStatus.failed)
+            item.copyWith(
+              status: UploadQueueItemStatus.failed,
+              waitingForResponse: false,
+            )
           else
             item,
       ],
